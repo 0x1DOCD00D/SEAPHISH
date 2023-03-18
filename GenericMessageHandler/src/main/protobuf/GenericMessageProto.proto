@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package DataContainer;
+
+message GenericProtobufMessage {
+  fixed32 messageID = 1;
+  optional string messageName = 2;
+  message Parameters {
+    fixed32 order = 1;
+    fixed32 attributeTypeId = 2;
+    optional string attributeTypeName = 3;
+    optional double dValue = 4;
+    optional GenericProtobufMessage nestedMsg = 5;
+  }
+  repeated Parameters parameters = 3;
+}

@@ -1,0 +1,5 @@
+package Agents
+
+class StateAggregator {
+
+}
