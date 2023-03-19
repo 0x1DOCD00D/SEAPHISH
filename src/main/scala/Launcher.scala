@@ -37,7 +37,7 @@ object Launcher:
 
     val system = ActorSystem(spActorSystemName, configCluster)
 
-    system.actorOf(
+    val ac = system.actorOf(
       ClusterSingletonManager.props(
         singletonProps = Props[AppStore],
         terminationMessage = PoisonPill,
@@ -45,5 +45,7 @@ object Launcher:
       ),
       "AppStore"
     )
+
+    ac ! thisCompIpAddress
     Thread.sleep(100000)
 
