@@ -2,7 +2,7 @@ package com.lsc
 
 import Agents.AppStore
 import akka.actor.{ActorSystem, PoisonPill, Props}
-import akka.cluster.singleton.{ClusterSingletonManager, ClusterSingletonManagerSettings}
+import akka.cluster.singleton.{ClusterSingletonManager, ClusterSingletonManagerSettings, ClusterSingletonProxy, ClusterSingletonProxySettings}
 import com.typesafe.config.ConfigFactory
 
 import java.net.{InetAddress, Socket}
@@ -45,7 +45,16 @@ object Launcher:
       ),
       "AppStore"
     )
+    Thread.sleep(10000)
 
-    ac ! thisCompIpAddress
+    val proxy = system.actorOf(
+      ClusterSingletonProxy.props(
+        singletonManagerPath = "/user/AppStore",
+        settings = ClusterSingletonProxySettings(system)
+      ),
+      "AppStoreProxy"
+    )
+
+    proxy ! thisCompIpAddress
     Thread.sleep(100000)
 
