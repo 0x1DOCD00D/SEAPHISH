@@ -5,7 +5,7 @@ import akka.actor.{ActorSystem, PoisonPill, Props}
 import akka.cluster.singleton.{ClusterSingletonManager, ClusterSingletonManagerSettings}
 import com.typesafe.config.ConfigFactory
 
-import java.net.InetAddress
+import java.net.{InetAddress, Socket}
 
 object Launcher:
   val ipAddr = InetAddress.getLocalHost
@@ -16,7 +16,12 @@ object Launcher:
     println("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/src/main/scala/Launcher.scala created at time 3:04 PM")
     println(s"Hostname: $hostName")
     println(ipAddr.getHostAddress)
-    println(ipAddr.getAddress)
+    println(ipAddr.getAddress.toList)
+    val sock = new Socket("192.168.1.1", 80);
+    val thisCompIpAddress = sock.getLocalAddress().getHostAddress()
+    System.out.println(thisCompIpAddress);
+    sock.close();
+
     val config = ConfigFactory.load()
     config.getConfig("SeaphishSimulator").entrySet().forEach(e => println(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
     val spActorSystemName: String = scala.util.Try(config.getConfig("SeaphishSimulator").getString("name")) match
@@ -25,7 +30,7 @@ object Launcher:
 
     val configCluster = ConfigFactory.parseString(
       s"""
-         |akka.remote.artery.canonical.hostname = $hostAddress
+         |akka.remote.artery.canonical.hostname = $thisCompIpAddress
          |akka.remote.artery.canonical.port = ${args(0)}
        """.stripMargin)
       .withFallback(config)
