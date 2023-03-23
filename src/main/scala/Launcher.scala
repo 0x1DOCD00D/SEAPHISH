@@ -1,11 +1,17 @@
 package com.lsc
 
 import Agents.AppStore
-import akka.actor.{ActorSystem, PoisonPill, Props}
 import akka.cluster.singleton.{ClusterSingletonManager, ClusterSingletonManagerSettings, ClusterSingletonProxy, ClusterSingletonProxySettings}
+import akka.Done
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, CoordinatedShutdown, PoisonPill, Props}
+import akka.util.Timeout
+
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.{TimeUnit, *}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import com.typesafe.config.ConfigFactory
 
-import java.net.{InetAddress, Socket}
+import java.net.{InetAddress, NetworkInterface, Socket}
 
 object Launcher:
   val ipAddr = InetAddress.getLocalHost
@@ -13,14 +19,18 @@ object Launcher:
   val hostAddress = ipAddr.getHostAddress
 
   @main def runLauncher(args: String*): Unit =
+    import scala.jdk.CollectionConverters.*
     println("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/src/main/scala/Launcher.scala created at time 3:04 PM")
     println(s"Hostname: $hostName")
     println(ipAddr.getHostAddress)
     println(ipAddr.getAddress.toList)
-    val sock = new Socket("192.168.1.1", 80);
-    val thisCompIpAddress = sock.getLocalAddress().getHostAddress()
-    System.out.println(thisCompIpAddress);
-    sock.close();
+    val thisCompIpAddress = NetworkInterface.getNetworkInterfaces().asScala
+        .flatMap(_.getInetAddresses.asScala)
+        .filterNot(_.getHostAddress == "127.0.0.1")
+        .filterNot(_.getHostAddress.contains(":"))
+        .map(_.getHostAddress).toList.headOption.getOrElse("INVALID IP ADDRESS")
+
+    println(s"thisCompIpAddress: $thisCompIpAddress")
 
     val config = ConfigFactory.load()
     config.getConfig("SeaphishSimulator").entrySet().forEach(e => println(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
@@ -36,6 +46,19 @@ object Launcher:
       .withFallback(config)
 
     val system = ActorSystem(spActorSystemName, configCluster)
+    given ExecutionContext = system.dispatcher
+    system.registerOnTermination(() => system.log.info("Actor system terminated"))
+    CoordinatedShutdown(system).addTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, spActorSystemName) { () =>
+      given Timeout = Timeout(5.seconds)
+
+      system.log.info("Coordinated shutdown task started")
+      Future {
+        ()
+//        (myActor ? 10).mapTo[Unit]
+        Done
+      }
+    }
+
 
     val ac = system.actorOf(
       ClusterSingletonManager.props(
@@ -56,5 +79,5 @@ object Launcher:
     )
 
     proxy ! thisCompIpAddress
-    Thread.sleep(100000)
+    Await.ready(system.whenTerminated, Duration.Inf)//Duration(10, TimeUnit.SECONDS))
 

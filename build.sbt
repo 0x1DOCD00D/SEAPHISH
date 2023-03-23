@@ -4,7 +4,7 @@ test / cinnamon := true
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
 val scalaTestVersion = "3.2.11"
-val akkaVersion = "2.7.0"
+val akkaVersion = "2.8.0"
 val guavaVersion = "31.1-jre"
 
 cinnamonLogLevel := "INFO"
@@ -80,6 +80,9 @@ lazy val Model = (project in file("Model"))
       //Akka stream
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
+      //distributed data
+      "com.typesafe.akka" %% "akka-distributed-data" % akkaVersion,
+      //scala reflection and compilation
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
 //      guava for graphs and tables
