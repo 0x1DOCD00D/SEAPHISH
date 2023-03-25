@@ -6,11 +6,13 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 val scalaTestVersion = "3.2.11"
 val akkaVersion = "2.8.0"
 val guavaVersion = "31.1-jre"
+val typeSafeConfigVersion = "1.4.2"
 
 cinnamonLogLevel := "INFO"
 
 lazy val commonDependencies = Seq(
-  "org.scalatest" %% "scalatest" % scalaTestVersion % Test
+  "org.scalatest" %% "scalatest" % scalaTestVersion % Test,
+  "com.typesafe" % "config" % typeSafeConfigVersion
 )
 
 lazy val root = (project in file("."))
@@ -18,7 +20,7 @@ lazy val root = (project in file("."))
     scalaVersion := "3.2.2",
     name := "SeaPhishSim",
     idePackagePrefix := Some("com.lsc")
-  ).enablePlugins (Cinnamon).aggregate(Model,GapModelGenerator,GenericMessageHandler).dependsOn(Model).dependsOn(GapModelGenerator)
+  ).enablePlugins (Cinnamon).aggregate(Model,GapModelGenerator,GenericSimUtilities).dependsOn(GapModelGenerator)
 
 lazy val GapModelGenerator = (project in file("GapModelGenerator"))
   .settings(
@@ -28,19 +30,16 @@ lazy val GapModelGenerator = (project in file("GapModelGenerator"))
       //      guava for graphs and tables
       "com.google.guava" % "guava" % guavaVersion
     )
-  )
+  ).dependsOn(Model)
 
-lazy val GenericMessageHandler = (project in file("GenericMessageHandler"))
+lazy val GenericSimUtilities = (project in file("GenericSimUtilities"))
   .settings(
-    scalaVersion := "2.13.8",
-    name := "GenericMessageHandler",
+    scalaVersion := "3.2.2",
+    name := "GenericSimUtilities",
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
     ),
-    libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value
-    )
+    libraryDependencies ++= commonDependencies
   )
 
 
@@ -92,7 +91,7 @@ lazy val Model = (project in file("Model"))
       "-deprecation", // emit warning and location for usages of deprecated APIs
       "-Ytasty-reader"
     )
-  ).dependsOn(GenericMessageHandler)
+  ).dependsOn(GenericSimUtilities)
 
 compileOrder := CompileOrder.JavaThenScala
 

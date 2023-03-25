@@ -1,6 +1,7 @@
 package com.lsc
 
 import Agents.AppStore
+import Randomizer.SupplierOfRandomness
 import akka.cluster.singleton.{ClusterSingletonManager, ClusterSingletonManagerSettings, ClusterSingletonProxy, ClusterSingletonProxySettings}
 import akka.Done
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, CoordinatedShutdown, PoisonPill, Props}
@@ -32,6 +33,7 @@ object Launcher:
 
     println(s"thisCompIpAddress: $thisCompIpAddress")
 
+    SupplierOfRandomness.randomGenInts._3.foreach(println)
     val config = ConfigFactory.load()
     config.getConfig("SeaphishSimulator").entrySet().forEach(e => println(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
     val spActorSystemName: String = scala.util.Try(config.getConfig("SeaphishSimulator").getString("name")) match
