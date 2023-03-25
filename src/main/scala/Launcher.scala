@@ -8,7 +8,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, CoordinatedShutdo
 import akka.util.Timeout
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.{TimeUnit, *}
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 import com.typesafe.config.ConfigFactory
 

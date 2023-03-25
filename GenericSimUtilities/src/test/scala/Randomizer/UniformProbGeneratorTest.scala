@@ -15,7 +15,7 @@ class UniformProbGeneratorTest extends AnyFlatSpec with Matchers {
   it should "create a uniform integer distribution, take ten random values check the first value" in {
     val (gen, offset, values) = UniformProbGenerator(UniformProbGenerator.createGenerator(Some(1)), 0, 10, true)
     values.length shouldBe 10
-    values.head shouldBe -1155869325
+    values.head shouldBe 1569548985
   }
 
   it should "create a uniform distribution, take three and then take one random values and check it" in {

@@ -1,7 +1,7 @@
 package GapGraph
 
 import Randomizer.UniformProbGenerator
-
+import Randomizer.UniformProbGenerator.*
 trait GapGraphComponent
 
 case class GuiObject(id: Int, children: Int, props: Int, currentDepth: Int = 1,
