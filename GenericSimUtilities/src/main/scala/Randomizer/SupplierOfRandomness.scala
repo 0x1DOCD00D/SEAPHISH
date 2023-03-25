@@ -5,7 +5,44 @@ import Utilz.SPSConstants.SEED
 import com.typesafe.config.ConfigFactory
 
 import scala.util.Try
-object SupplierOfRandomness {
+
+trait MutableBookeeping4Efficiency:
+  protected var initInts: Boolean = false
+  protected var initDbls: Boolean = false
+  protected var currOffsetInt:Int = 0
+  protected var currGenInt: UniformProbGenerator = _
+  protected var currOffsetDbl:Int = 0
+  protected var currGenDbl: UniformProbGenerator = _
+
+
+object SupplierOfRandomness extends MutableBookeeping4Efficiency:
+  def onDemand(minv:Int = 0, maxv:Int = Int.MaxValue): Int =
+    if !initInts then
+      initInts = true
+      UniformProbGenerator(UniformProbGenerator.createGenerator(seed), szOfValues = 0, ints = true) match {
+        case (gen, offset, lstOfInts) => currGenInt = gen; currOffsetInt = offset; lstOfInts.asInstanceOf[List[Int]]
+      }
+    currGenInt.generator.between(minv,maxv)
+
+  def randInts(howManyNumbers: Int): List[Int] =
+    if !initInts then
+      initInts = true
+      UniformProbGenerator(UniformProbGenerator.createGenerator(seed), szOfValues = howManyNumbers, ints = true) match {
+        case (gen, offset, lstOfInts) => currGenInt = gen; currOffsetInt = offset; lstOfInts.asInstanceOf[List[Int]]
+      }
+    else UniformProbGenerator(currGenInt, offset = currOffsetInt, szOfValues = howManyNumbers, ints = true) match {
+      case (gen, offset, lstOfInts) => currGenInt = gen; currOffsetInt += offset; lstOfInts.asInstanceOf[List[Int]]
+    }
+
+  def randProbs(howManyNumbers: Int): List[Double] =
+    if !initDbls then
+      initDbls = true
+      UniformProbGenerator(UniformProbGenerator.createGenerator(seed), szOfValues = howManyNumbers) match {
+        case (gen, offset, lst) => currGenDbl = gen; currOffsetDbl = offset; lst.asInstanceOf[List[Double]]
+      }
+    else UniformProbGenerator(currGenInt, offset = currOffsetInt, szOfValues = howManyNumbers) match {
+      case (gen, offset, lst) => currGenInt = gen; currOffsetInt += offset; lst.asInstanceOf[List[Double]]
+    }
 
 
   private val seed: Option[Long] = Try(SPSConstants.globalConfig.getLong(SEED)) match {
@@ -16,13 +53,4 @@ object SupplierOfRandomness {
       }
     case scala.util.Failure(_) => None
   }
-
-
-  val randomGenInts: (UniformProbGenerator, Int, List[Int]) = UniformProbGenerator(UniformProbGenerator.createGenerator(seed), ints = true) match {
-    case (gen, offset, lstOfInts) => (gen, offset, lstOfInts.asInstanceOf[List[Int]])
-  }
-  val randomGenDoubles: (UniformProbGenerator, Int, List[Double]) = UniformProbGenerator(UniformProbGenerator.createGenerator(seed)) match {
-    case (gen, offset, lstOfDoubles) => (gen, offset, lstOfDoubles.asInstanceOf[List[Double]])
-  }
-}
 

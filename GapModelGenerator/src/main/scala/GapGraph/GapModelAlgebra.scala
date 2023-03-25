@@ -1,6 +1,6 @@
 package GapGraph
 
-import Randomizer.UniformProbGenerator
+import Randomizer.{SupplierOfRandomness, UniformProbGenerator}
 import com.google.common.graph.*
 
 import scala.collection.immutable.TreeSeqMap.OrderBy
@@ -9,7 +9,7 @@ import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Random, Success, Try}
 
 type GuiStateMachine = MutableValueGraph[GuiObject, Action]
-class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: Int, val maxProperties: Int, val propValueRange:Int, val actionRange: Int, val seed:Option[Long] = None):
+class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: Int, val maxProperties: Int, val propValueRange:Int, val actionRange: Int):
   require(statesTotal > 0, "The total number of states must be positive")
   require(maxBranchingFactor > 0, "The maximum branching factor must be greater than zero")
   require(maxDepth > 0, "The maximum depth must be greater than zero")
@@ -20,14 +20,13 @@ class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: 
   //noinspection UnstableApiUsage
 
   private val stateMachine: GuiStateMachine = ValueGraphBuilder.directed().build()
-  private val (gen, offset, randValues) = UniformProbGenerator(UniformProbGenerator.createGenerator(seed),ints = true)
 
   private def createNodes(): Unit =
     (1 to statesTotal).foreach(id=>
-      stateMachine.addNode(GuiObject(id, UniformProbGenerator.onDemand(gen, maxv = maxBranchingFactor),
-        UniformProbGenerator.onDemand(gen, maxv = maxProperties), gen = gen, propValueRange = UniformProbGenerator.onDemand(gen, maxv = propValueRange),
-        maxDepth = UniformProbGenerator.onDemand(gen, maxv = maxDepth), maxBranchingFactor = UniformProbGenerator.onDemand(gen, maxv = maxBranchingFactor),
-        maxProperties = UniformProbGenerator.onDemand(gen, maxv = maxProperties)
+      stateMachine.addNode(GuiObject(id, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
+        SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
+        maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
+        maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties)
         ))
       ()
     )
@@ -36,11 +35,11 @@ class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: 
     val fCount = from.childrenCount
     val tCount = to.childrenCount
 
-    Action(UniformProbGenerator.onDemand(gen, maxv = actionRange),
-      UniformProbGenerator.onDemand(gen, maxv = if fCount > 0 then fCount else 1),
-      UniformProbGenerator.onDemand(gen, maxv = if fCount > 0 then fCount else 1),
-      if UniformProbGenerator.onDemand(gen) % 2 == 0 then None else Some(UniformProbGenerator.onDemand(gen, maxv = propValueRange)),
-      randValues.head.asInstanceOf[Double]
+    Action(SupplierOfRandomness.onDemand(maxv = actionRange),
+      SupplierOfRandomness.onDemand(maxv = if fCount > 0 then fCount else 1),
+      SupplierOfRandomness.onDemand(maxv = if fCount > 0 then fCount else 1),
+      if SupplierOfRandomness.onDemand() % 2 == 0 then None else Some(SupplierOfRandomness.onDemand(maxv = propValueRange)),
+      SupplierOfRandomness.randProbs(1).head
     )
 
   //  using this method we create a connected graph where there are no standalone unconnected nodes
@@ -54,10 +53,10 @@ class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: 
 
   private def addInitState(allNodes: Array[GuiObject], connectedness: Int): GuiObject =
     val maxOutdegree = stateMachine.nodes().asScala.map(node=>stateMachine.outDegree(node)).max
-    val newInitNode:GuiObject = GuiObject(0, UniformProbGenerator.onDemand(gen, maxv = maxBranchingFactor),
-      UniformProbGenerator.onDemand(gen, maxv = maxProperties), gen = gen, propValueRange = UniformProbGenerator.onDemand(gen, maxv = propValueRange),
-      maxDepth = UniformProbGenerator.onDemand(gen, maxv = maxDepth), maxBranchingFactor = UniformProbGenerator.onDemand(gen, maxv = maxBranchingFactor),
-      maxProperties = UniformProbGenerator.onDemand(gen, maxv = maxProperties)
+    val newInitNode:GuiObject = GuiObject(0, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
+      SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
+      maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
+      maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties)
     )
     stateMachine.addNode(newInitNode)
     val connected: Array[GuiObject] = allNodes.filter(node => stateMachine.outDegree(node) > (if maxOutdegree >= connectedness then connectedness else maxOutdegree - 1))

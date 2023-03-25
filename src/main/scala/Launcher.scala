@@ -33,7 +33,6 @@ object Launcher:
 
     println(s"thisCompIpAddress: $thisCompIpAddress")
 
-    SupplierOfRandomness.randomGenInts._3.foreach(println)
     val config = ConfigFactory.load()
     config.getConfig("SeaphishSimulator").entrySet().forEach(e => println(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
     val spActorSystemName: String = scala.util.Try(config.getConfig("SeaphishSimulator").getString("name")) match
