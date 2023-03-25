@@ -5,8 +5,6 @@ import com.google.common.graph.*
 import scala.collection.immutable.TreeSeqMap.OrderBy
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
-//import scala.util.{Failure, Random, Success, Try}
-
 
 case class GapGraph(sm: GuiStateMachine, initState: GuiObject):
   def degrees: List[(Int, Int)] = sm.nodes().asScala.toList.map(node => (sm.inDegree(node), sm.outDegree(node)))

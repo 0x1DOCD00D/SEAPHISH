@@ -1,6 +1,8 @@
 package GapGraph
 
 import Randomizer.{SupplierOfRandomness, UniformProbGenerator}
+import Utilz.SPSConstants
+import Utilz.SPSConstants.{DEFAULTEDGEPROBABILITY, EDGEPROBABILITY, SEED}
 import com.google.common.graph.*
 
 import scala.collection.immutable.TreeSeqMap.OrderBy
@@ -9,7 +11,7 @@ import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Random, Success, Try}
 
 type GuiStateMachine = MutableValueGraph[GuiObject, Action]
-class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: Int, val maxProperties: Int, val propValueRange:Int, val actionRange: Int):
+class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: Int, val maxProperties: Int, val propValueRange:Int, val actionRange: Int) extends GapGraphConnectednessFinalizer:
   require(statesTotal > 0, "The total number of states must be positive")
   require(maxBranchingFactor > 0, "The maximum branching factor must be greater than zero")
   require(maxDepth > 0, "The maximum depth must be greater than zero")
@@ -19,7 +21,7 @@ class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: 
 
   //noinspection UnstableApiUsage
 
-  private val stateMachine: GuiStateMachine = ValueGraphBuilder.directed().build()
+  private [this] val stateMachine: GuiStateMachine = ValueGraphBuilder.directed().build()
 
   private def createNodes(): Unit =
     (1 to statesTotal).foreach(id=>
@@ -42,33 +44,18 @@ class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: 
       SupplierOfRandomness.randProbs(1).head
     )
 
-  //  using this method we create a connected graph where there are no standalone unconnected nodes
-  private def linkOrphanedNodesAndInitStates(allNodes: Array[GuiObject]): Unit =
-    val orphans: Array[GuiObject] = allNodes.filter(node => stateMachine.incidentEdges(node).isEmpty)
-    val connected: Array[GuiObject] = allNodes.filterNot(node => stateMachine.incidentEdges(node).isEmpty)
-    orphans.foreach(node=>
-      val other = connected(scala.util.Random.nextInt(connected.length))
-      stateMachine.putEdgeValue(other, node, createAction(node, other))
-    )
-
-  private def addInitState(allNodes: Array[GuiObject], connectedness: Int): GuiObject =
-    val maxOutdegree = stateMachine.nodes().asScala.map(node=>stateMachine.outDegree(node)).max
-    val newInitNode:GuiObject = GuiObject(0, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-      SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
-      maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-      maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties)
-    )
-    stateMachine.addNode(newInitNode)
-    val connected: Array[GuiObject] = allNodes.filter(node => stateMachine.outDegree(node) > (if maxOutdegree >= connectedness then connectedness else maxOutdegree - 1))
-    connected.foreach(node=>
-      stateMachine.putEdgeValue(newInitNode, node, createAction(newInitNode, node)))
-    newInitNode
-
-  def generateModel(upg:(UniformProbGenerator, Int), edgeProbability: Double = 0.3d): (GapGraph, UniformProbGenerator, Int) =
+  def generateModel(): GapGraph =
+    val edgeProbability: Double = Try(SPSConstants.globalConfig.getDouble(EDGEPROBABILITY)) match {
+      case scala.util.Success(value) =>
+        Try(value) match {
+          case scala.util.Success(value) => value
+          case scala.util.Failure(_) => DEFAULTEDGEPROBABILITY
+        }
+      case scala.util.Failure(_) => DEFAULTEDGEPROBABILITY
+    }
     createNodes()
     val allNodes: Array[GuiObject] = stateMachine.nodes().asScala.toArray
-    val (gen, offset, probValues) = UniformProbGenerator(upg._1, upg._2, allNodes.length*allNodes.length)
-    val pvIter: Iterator[Double] = probValues.iterator.asInstanceOf[Iterator[Double]]
+    val pvIter: Iterator[Double] = SupplierOfRandomness.randProbs(allNodes.length*allNodes.length).iterator
     allNodes.foreach(node=>
       allNodes.foreach(other=>
         if node != other && pvIter.next() < edgeProbability then
@@ -77,8 +64,29 @@ class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: 
       )
     )
     linkOrphanedNodesAndInitStates(allNodes)
-    (GapGraph(stateMachine, addInitState(allNodes,28)), gen, offset)
+    GapGraph(stateMachine, addInitState(allNodes,28))
   end generateModel
+
+  def linkOrphanedNodesAndInitStates(allNodes: Array[GuiObject]): Unit =
+    val orphans: Array[GuiObject] = allNodes.filter(node => stateMachine.incidentEdges(node).isEmpty)
+    val connected: Array[GuiObject] = allNodes.filterNot(node => stateMachine.incidentEdges(node).isEmpty)
+    orphans.foreach(node =>
+      val other = connected(scala.util.Random.nextInt(connected.length))
+      stateMachine.putEdgeValue(other, node, createAction(node, other))
+    )
+
+  def addInitState(allNodes: Array[GuiObject], connectedness: Int): GuiObject =
+    val maxOutdegree = stateMachine.nodes().asScala.map(node => stateMachine.outDegree(node)).max
+    val newInitNode: GuiObject = GuiObject(0, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
+      SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
+      maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
+      maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties)
+    )
+    stateMachine.addNode(newInitNode)
+    val connected: Array[GuiObject] = allNodes.filter(node => stateMachine.outDegree(node) > (if maxOutdegree >= connectedness then connectedness else maxOutdegree - 1))
+    connected.foreach(node =>
+      stateMachine.putEdgeValue(newInitNode, node, createAction(newInitNode, node)))
+    newInitNode
 
 object GapModelAlgebra:
 //  each node of the graph is a GuiObject that corresponds to a GUI screen, which is a tree of GuiObjects
