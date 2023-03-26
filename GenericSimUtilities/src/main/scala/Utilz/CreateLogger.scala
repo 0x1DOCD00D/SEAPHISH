@@ -10,6 +10,6 @@ object CreateLogger:
     val logger = LoggerFactory.getLogger(class4Logger.getClass)
     Try(getClass.getClassLoader.getResourceAsStream(LOGBACKXML)) match {
       case Failure(exception) => logger.error(s"Failed to locate $LOGBACKXML for reason $exception")
-      case Success(inStream) => inStream.close()
+      case Success(inStream) => if inStream != null then inStream.close()
     }
     logger

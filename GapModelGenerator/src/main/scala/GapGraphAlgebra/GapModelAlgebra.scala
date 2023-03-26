@@ -101,4 +101,4 @@ object GapModelAlgebra:
 
 //  each node of the graph is a GuiObject that corresponds to a GUI screen, which is a tree of GuiObjects
   @main def runGapModelAlgebra(args: String*): Unit =
-    println("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/GapModelGenerator/src/main/scala/GapGraph/GapModelAlgebra.scala created at time 5:42 PM")
+    logger.info("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/GapModelGenerator/src/main/scala/GapGraph/GapModelAlgebra.scala created at time 5:42 PM")

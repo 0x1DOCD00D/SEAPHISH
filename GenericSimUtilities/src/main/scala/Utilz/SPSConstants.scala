@@ -6,6 +6,7 @@ import scala.util.Failure
 
 object SPSConstants:
   private val config = ConfigFactory.load()
+  println(config.entrySet().forEach(System.out.println(_)))
 
   val SEED: String = "seed"
   val CONFIGENTRYNAME: String = "SeaphishSimulator"
@@ -29,10 +30,10 @@ object SPSConstants:
 
   val globalConfig: Config = scala.util.Try(config.getConfig(CONFIGENTRYNAME)) match {
     case scala.util.Success(cfg) => cfg
-    case Failure(exception) => throw new Exception(s"No config entry found for SeaphishSimulator: ${exception.getMessage}")
+    case Failure(exception) => throw new Exception(s"No config entry found for $CONFIGENTRYNAME: ${exception.getMessage}")
   }
 
-  val configGapModel: Config = scala.util.Try(config.getConfig(CONFIGENTRYNAME).getConfig(GAPMODELCONFIGENTRYNAME)) match {
+  val configGapModel: Config = scala.util.Try(globalConfig.getConfig(GAPMODELCONFIGENTRYNAME)) match {
     case scala.util.Success(cfg) => cfg
-    case Failure(exception) => throw new Exception(s"No config entry found for SeaphishSimulator.GapModel: ${exception.getMessage}")
+    case Failure(exception) => throw new Exception(s"No config entry found for $GAPMODELCONFIGENTRYNAME: ${exception.getMessage}")
   }

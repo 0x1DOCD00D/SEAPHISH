@@ -33,7 +33,7 @@ lazy val GapModelGenerator = (project in file("GapModelGenerator"))
       //      guava for graphs and tables
       "com.google.guava" % "guava" % guavaVersion
     )
-  ).dependsOn(Model)
+  ).dependsOn(Model, GenericSimUtilities)
 
 lazy val GenericSimUtilities = (project in file("GenericSimUtilities"))
   .settings(

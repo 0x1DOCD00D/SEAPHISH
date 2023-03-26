@@ -2,6 +2,7 @@ package com.lsc
 
 import Agents.AppStore
 import Randomizer.SupplierOfRandomness
+import Utilz.CreateLogger
 import akka.cluster.singleton.{ClusterSingletonManager, ClusterSingletonManagerSettings, ClusterSingletonProxy, ClusterSingletonProxySettings}
 import akka.Done
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, CoordinatedShutdown, PoisonPill, Props}
@@ -11,33 +12,35 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 import com.typesafe.config.ConfigFactory
+import org.slf4j.Logger
 
 import java.net.{InetAddress, NetworkInterface, Socket}
 
 object Launcher:
+  val logger:Logger = CreateLogger(classOf[Launcher.type])
   val ipAddr = InetAddress.getLocalHost
   val hostName = ipAddr.getHostName
   val hostAddress = ipAddr.getHostAddress
 
   @main def runLauncher(args: String*): Unit =
     import scala.jdk.CollectionConverters.*
-    println("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/src/main/scala/Launcher.scala created at time 3:04 PM")
-    println(s"Hostname: $hostName")
-    println(ipAddr.getHostAddress)
-    println(ipAddr.getAddress.toList)
+    logger.info("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/src/main/scala/Launcher.scala created at time 3:04 PM")
+    logger.info(s"Hostname: $hostName")
+    logger.info(ipAddr.getHostAddress)
+    logger.info(ipAddr.getAddress.toList.mkString(","))
     val thisCompIpAddress = NetworkInterface.getNetworkInterfaces().asScala
         .flatMap(_.getInetAddresses.asScala)
         .filterNot(_.getHostAddress == "127.0.0.1")
         .filterNot(_.getHostAddress.contains(":"))
         .map(_.getHostAddress).toList.headOption.getOrElse("INVALID IP ADDRESS")
 
-    println(s"thisCompIpAddress: $thisCompIpAddress")
+    logger.info(s"thisCompIpAddress: $thisCompIpAddress")
 
     val config = ConfigFactory.load()
-    println("for the main entry")
-    config.getConfig("SeaphishSimulator").entrySet().forEach(e => println(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
-    println("for the GapModel entry")
-    config.getConfig("SeaphishSimulator").getConfig("GapModel").entrySet().forEach(e => println(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
+    logger.info("for the main entry")
+    config.getConfig("SeaphishSimulator").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
+    logger.info("for the GapModel entry")
+    config.getConfig("SeaphishSimulator").getConfig("GapModel").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
     val spActorSystemName: String = scala.util.Try(config.getConfig("SeaphishSimulator").getString("name")) match
       case scala.util.Success(value) => value
       case scala.util.Failure(exception) => "SeaphishSimulatorSystem" //may come from the command line
