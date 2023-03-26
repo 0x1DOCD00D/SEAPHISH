@@ -1,4 +1,4 @@
-package GapGraph
+package GapGraphAlgebra
 
 import com.google.common.graph.*
 

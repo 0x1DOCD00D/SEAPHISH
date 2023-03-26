@@ -34,7 +34,10 @@ object Launcher:
     println(s"thisCompIpAddress: $thisCompIpAddress")
 
     val config = ConfigFactory.load()
+    println("for the main entry")
     config.getConfig("SeaphishSimulator").entrySet().forEach(e => println(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
+    println("for the GapModel entry")
+    config.getConfig("SeaphishSimulator").getConfig("GapModel").entrySet().forEach(e => println(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
     val spActorSystemName: String = scala.util.Try(config.getConfig("SeaphishSimulator").getString("name")) match
       case scala.util.Success(value) => value
       case scala.util.Failure(exception) => "SeaphishSimulatorSystem" //may come from the command line

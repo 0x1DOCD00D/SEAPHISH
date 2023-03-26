@@ -1,4 +1,4 @@
-package GapGraph
+package GapGraphAlgebra
 
 import Randomizer.{SupplierOfRandomness, UniformProbGenerator}
 import Randomizer.UniformProbGenerator.*

@@ -7,12 +7,15 @@ val scalaTestVersion = "3.2.11"
 val akkaVersion = "2.8.0"
 val guavaVersion = "31.1-jre"
 val typeSafeConfigVersion = "1.4.2"
+val logbackVersion = "1.2.10"
+val sfl4sVersion = "2.0.0-alpha5"
 
 cinnamonLogLevel := "INFO"
 
 lazy val commonDependencies = Seq(
   "org.scalatest" %% "scalatest" % scalaTestVersion % Test,
-  "com.typesafe" % "config" % typeSafeConfigVersion
+  "com.typesafe" % "config" % typeSafeConfigVersion,
+  "ch.qos.logback" % "logback-classic" % logbackVersion
 )
 
 lazy val root = (project in file("."))
@@ -89,7 +92,8 @@ lazy val Model = (project in file("Model"))
     ),
     scalacOptions ++= Seq(
       "-deprecation", // emit warning and location for usages of deprecated APIs
-      "-Ytasty-reader"
+      "--explain-types", // explain type errors in more detail
+      "-feature" // emit warning and location for usages of features that should be imported explicitly
     )
   ).dependsOn(GenericSimUtilities)
 

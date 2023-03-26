@@ -1,9 +1,12 @@
-package GapGraph
+package GapGraphAlgebra
 
+import GapGraphAlgebra.GapModelAlgebra.{actionRange, connectedness, edgeProbability, maxBranchingFactor, maxDepth, maxProperties, propValueRange, statesTotal}
 import Randomizer.{SupplierOfRandomness, UniformProbGenerator}
-import Utilz.SPSConstants
-import Utilz.SPSConstants.{DEFAULTEDGEPROBABILITY, EDGEPROBABILITY, SEED}
+import Utilz.ConfigReader.getConfigEntry
+import Utilz.{CreateLogger, SPSConstants}
+import Utilz.SPSConstants.{ACTIONRANGE, ACTIONRANGEDEFAULT, CONNECTEDNESS, CONNECTEDNESSDEFAULT, DEFAULTEDGEPROBABILITY, EDGEPROBABILITY, MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT, MAXDEPTH, MAXDEPTHDEFAULT, MAXPROPERTIES, MAXPROPERTIESDEFAULT, PROPVALUERANGE, PROPVALUERANGEDEFAULT, SEED, STATESTOTAL, STATESTOTALDEFAULT}
 import com.google.common.graph.*
+import org.slf4j.Logger
 
 import scala.collection.immutable.TreeSeqMap.OrderBy
 import scala.collection.mutable
@@ -11,7 +14,7 @@ import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Random, Success, Try}
 
 type GuiStateMachine = MutableValueGraph[GuiObject, Action]
-class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: Int, val maxProperties: Int, val propValueRange:Int, val actionRange: Int) extends GapGraphConnectednessFinalizer:
+class GapModel extends GapGraphConnectednessFinalizer:
   require(statesTotal > 0, "The total number of states must be positive")
   require(maxBranchingFactor > 0, "The maximum branching factor must be greater than zero")
   require(maxDepth > 0, "The maximum depth must be greater than zero")
@@ -45,14 +48,6 @@ class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: 
     )
 
   def generateModel(): GapGraph =
-    val edgeProbability: Double = Try(SPSConstants.globalConfig.getDouble(EDGEPROBABILITY)) match {
-      case scala.util.Success(value) =>
-        Try(value) match {
-          case scala.util.Success(value) => value
-          case scala.util.Failure(_) => DEFAULTEDGEPROBABILITY
-        }
-      case scala.util.Failure(_) => DEFAULTEDGEPROBABILITY
-    }
     createNodes()
     val allNodes: Array[GuiObject] = stateMachine.nodes().asScala.toArray
     val pvIter: Iterator[Double] = SupplierOfRandomness.randProbs(allNodes.length*allNodes.length).iterator
@@ -64,18 +59,20 @@ class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: 
       )
     )
     linkOrphanedNodesAndInitStates(allNodes)
-    GapGraph(stateMachine, addInitState(allNodes,28))
+    GapGraph(stateMachine, addInitState(allNodes))
   end generateModel
 
   def linkOrphanedNodesAndInitStates(allNodes: Array[GuiObject]): Unit =
     val orphans: Array[GuiObject] = allNodes.filter(node => stateMachine.incidentEdges(node).isEmpty)
     val connected: Array[GuiObject] = allNodes.filterNot(node => stateMachine.incidentEdges(node).isEmpty)
     orphans.foreach(node =>
-      val other = connected(scala.util.Random.nextInt(connected.length))
-      stateMachine.putEdgeValue(other, node, createAction(node, other))
+      val other = connected(SupplierOfRandomness.onDemand(maxv = connected.length))
+      Try(stateMachine.putEdgeValue(other, node, createAction(node, other))) match
+        case Failure(exception) => GapModelAlgebra.logger.error(s"Failed to add an edge from $other to $node for reason ${exception.getMessage}")
+        case Success(value) => ()
     )
 
-  def addInitState(allNodes: Array[GuiObject], connectedness: Int): GuiObject =
+  def addInitState(allNodes: Array[GuiObject]): GuiObject =
     val maxOutdegree = stateMachine.nodes().asScala.map(node => stateMachine.outDegree(node)).max
     val newInitNode: GuiObject = GuiObject(0, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
       SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
@@ -89,5 +86,19 @@ class GapModel(val statesTotal: Int, val maxBranchingFactor: Int, val maxDepth: 
     newInitNode
 
 object GapModelAlgebra:
+  val logger:Logger = CreateLogger(classOf[GapModel])
+
+  val edgeProbability: Double = getConfigEntry(EDGEPROBABILITY, DEFAULTEDGEPROBABILITY)
+  val statesTotal: Int = getConfigEntry(STATESTOTAL, STATESTOTALDEFAULT)
+  val maxBranchingFactor: Int = getConfigEntry(MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT)
+  val maxDepth: Int = getConfigEntry(MAXDEPTH, MAXDEPTHDEFAULT)
+  val maxProperties: Int = getConfigEntry(MAXPROPERTIES, MAXPROPERTIESDEFAULT)
+  val propValueRange: Int = getConfigEntry(PROPVALUERANGE, PROPVALUERANGEDEFAULT)
+  val actionRange: Int = getConfigEntry(ACTIONRANGE, ACTIONRANGEDEFAULT)
+  val connectedness: Int = getConfigEntry(CONNECTEDNESS, CONNECTEDNESSDEFAULT)
+
+  def apply(): GapGraph = new GapModel().generateModel()
+
 //  each node of the graph is a GuiObject that corresponds to a GUI screen, which is a tree of GuiObjects
-  trait GapGraphComponent()
+  @main def runGapModelAlgebra(args: String*): Unit =
+    println("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/GapModelGenerator/src/main/scala/GapGraph/GapModelAlgebra.scala created at time 5:42 PM")
