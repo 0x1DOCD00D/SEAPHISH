@@ -6,7 +6,6 @@ import scala.util.Failure
 
 object SPSConstants:
   private val config = ConfigFactory.load()
-  println(config.entrySet().forEach(System.out.println(_)))
 
   val SEED: String = "seed"
   val CONFIGENTRYNAME: String = "SeaphishSimulator"

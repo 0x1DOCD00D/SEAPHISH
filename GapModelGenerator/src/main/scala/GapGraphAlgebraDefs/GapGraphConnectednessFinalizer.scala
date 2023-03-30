@@ -1,4 +1,4 @@
-package GapGraphAlgebra
+package GapGraphAlgebraDefs
 
 trait GapGraphConnectednessFinalizer:
   //  using this method we create a connected graph where there are no standalone unconnected nodes

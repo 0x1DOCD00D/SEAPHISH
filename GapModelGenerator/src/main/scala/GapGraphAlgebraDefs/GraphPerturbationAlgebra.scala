@@ -1,4 +1,4 @@
-package GapGraphAlgebra
+package GapGraphAlgebraDefs
 
 import scala.util.{Failure, Success, Try}
 import com.google.common.graph.*

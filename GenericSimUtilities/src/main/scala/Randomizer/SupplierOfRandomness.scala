@@ -22,7 +22,7 @@ object SupplierOfRandomness extends MutableBookeeping4Efficiency:
       UniformProbGenerator(UniformProbGenerator.createGenerator(seed), szOfValues = 0, ints = true) match {
         case (gen, offset, lstOfInts) => currGenInt = gen; currOffsetInt = offset; lstOfInts.asInstanceOf[List[Int]]
       }
-    currGenInt.generator.between(minv,maxv)
+    if minv >= maxv then minv else currGenInt.generator.between(minv,maxv)
 
   def randInts(howManyNumbers: Int): List[Int] =
     if !initInts then

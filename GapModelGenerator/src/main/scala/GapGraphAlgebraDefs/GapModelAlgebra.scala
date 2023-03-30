@@ -1,6 +1,6 @@
-package GapGraphAlgebra
+package GapGraphAlgebraDefs
 
-import GapGraphAlgebra.GapModelAlgebra.{actionRange, connectedness, edgeProbability, maxBranchingFactor, maxDepth, maxProperties, propValueRange, statesTotal}
+import GapGraphAlgebraDefs.GapModelAlgebra.{actionRange, connectedness, edgeProbability, maxBranchingFactor, maxDepth, maxProperties, propValueRange, statesTotal}
 import Randomizer.{SupplierOfRandomness, UniformProbGenerator}
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.{CreateLogger, SPSConstants}
@@ -22,9 +22,8 @@ class GapModel extends GapGraphConnectednessFinalizer:
   require(propValueRange > 0, "The range of property values must be greater than zero")
   require(actionRange > 0, "The range of actions must be greater than zero")
 
-  //noinspection UnstableApiUsage
-
   private [this] val stateMachine: GuiStateMachine = ValueGraphBuilder.directed().build()
+  val modelUUID:String = java.util.UUID.randomUUID.toString
 
   private def createNodes(): Unit =
     (1 to statesTotal).foreach(id=>
@@ -41,8 +40,8 @@ class GapModel extends GapGraphConnectednessFinalizer:
     val tCount = to.childrenCount
 
     Action(SupplierOfRandomness.onDemand(maxv = actionRange),
-      SupplierOfRandomness.onDemand(maxv = if fCount > 0 then fCount else 1),
-      SupplierOfRandomness.onDemand(maxv = if fCount > 0 then fCount else 1),
+      if fCount > 0 then SupplierOfRandomness.onDemand(maxv = fCount) else 0,
+      if tCount > 0 then SupplierOfRandomness.onDemand(maxv = tCount) else 0,
       if SupplierOfRandomness.onDemand() % 2 == 0 then None else Some(SupplierOfRandomness.onDemand(maxv = propValueRange)),
       SupplierOfRandomness.randProbs(1).head
     )

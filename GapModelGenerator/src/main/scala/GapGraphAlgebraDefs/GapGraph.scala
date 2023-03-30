@@ -1,4 +1,4 @@
-package GapGraphAlgebra
+package GapGraphAlgebraDefs
 
 import com.google.common.graph.*
 
@@ -11,16 +11,24 @@ case class GapGraph(sm: GuiStateMachine, initState: GuiObject):
 
   def totalNodes: Int = sm.nodes().asScala.count(_ => true)
 
-  def adjacencyMatrix: Array[Array[Int]] =
+  def adjacencyMatrix: Array[Array[Float]] =
     val nodes: Array[GuiObject] = sm.nodes().asScala.toArray
-    val matrix: Array[Array[Int]] = Array.ofDim[Int](nodes.length, nodes.length)
+    val matrix: Array[Array[Float]] = Array.ofDim[Float](nodes.length, nodes.length)
     nodes.indices.foreach(i =>
       nodes.indices.foreach(j =>
-        if sm.hasEdgeConnecting(nodes(i), nodes(j)) then matrix(i)(j) = 1
-        else matrix(i)(j) = 0
+        if sm.hasEdgeConnecting(nodes(i), nodes(j)) then matrix(i)(j) = sm.edgeValue(nodes(i), nodes(j)).get.cost.toFloat
+        else matrix(i)(j) = Float.PositiveInfinity
       )
     )
     matrix
+
+  extension (m: Array[Array[Float]])
+    def toCsv: String =
+      val sb = new StringBuilder
+      m.foreach(row =>
+        sb.append("\n")
+        row.foreach(cell => if cell != Float.PositiveInfinity then sb.append(f"$cell%.3f").append(",") else sb.append("-").append(",")))
+      sb.toString
 
   def maxOutDegree(): Int = sm.nodes().asScala.map(node => sm.outDegree(node)).max
 
