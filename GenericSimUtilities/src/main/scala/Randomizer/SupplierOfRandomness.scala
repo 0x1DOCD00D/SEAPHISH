@@ -16,6 +16,7 @@ trait MutableBookeeping4Efficiency:
 
 
 object SupplierOfRandomness extends MutableBookeeping4Efficiency:
+  def `YesOrNo?`: Boolean = onDemand(0,1) == 1
   def onDemand(minv:Int = 0, maxv:Int = Int.MaxValue): Int =
     if !initInts then
       initInts = true
