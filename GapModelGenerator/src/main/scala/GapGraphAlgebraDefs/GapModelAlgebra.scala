@@ -38,15 +38,17 @@ class GapModel extends GapGraphConnectednessFinalizer:
   private def createAction(from: GuiObject, to: GuiObject): Action =
     val fCount = from.childrenCount
     val tCount = to.childrenCount
+    val cost: Double = SupplierOfRandomness.randProbs(1).head
+    require(cost>= 0 && cost <= 1)
 
     Action(SupplierOfRandomness.onDemand(maxv = actionRange),
       if fCount > 0 then SupplierOfRandomness.onDemand(maxv = fCount) else 0,
       if tCount > 0 then SupplierOfRandomness.onDemand(maxv = tCount) else 0,
       if SupplierOfRandomness.onDemand() % 2 == 0 then None else Some(SupplierOfRandomness.onDemand(maxv = propValueRange)),
-      SupplierOfRandomness.randProbs(1).head
+      cost
     )
 
-  def generateModel(): GapGraph =
+  def generateModel(forceLinkOrphans: Boolean = false): GapGraph =
     createNodes()
     val allNodes: Array[GuiObject] = stateMachine.nodes().asScala.toArray
     val pvIter: Iterator[Double] = SupplierOfRandomness.randProbs(allNodes.length*allNodes.length).iterator
@@ -57,19 +59,21 @@ class GapModel extends GapGraphConnectednessFinalizer:
         else ()
       )
     )
-    linkOrphanedNodesAndInitStates(allNodes)
-    GapGraph(stateMachine, addInitState(allNodes))
+    val initState: GuiObject = addInitState(allNodes)
+    val generatedGraph: GapGraph = GapGraph(stateMachine, initState)
+    if forceLinkOrphans then
+      val unreachableNodes: Set[GuiObject] = generatedGraph.unreachableNodes()._1
+      val reachableNodes: Set[GuiObject] = stateMachine.nodes().asScala.toSet -- unreachableNodes
+      val rnSize = reachableNodes.size
+      if rnSize > 0 then
+        val arrReachableNodes = reachableNodes.toArray
+        unreachableNodes.foreach(urn =>
+          val index = SupplierOfRandomness.onDemand(maxv = rnSize)
+          stateMachine.putEdgeValue(arrReachableNodes(index), urn, createAction(arrReachableNodes(index), urn))
+        )
+      else unreachableNodes.foreach(unreachableNode =>stateMachine.putEdgeValue(initState, unreachableNode, createAction(initState, unreachableNode)))
+    generatedGraph
   end generateModel
-
-  def linkOrphanedNodesAndInitStates(allNodes: Array[GuiObject]): Unit =
-    val orphans: Array[GuiObject] = allNodes.filter(node => stateMachine.incidentEdges(node).isEmpty)
-    val connected: Array[GuiObject] = allNodes.filterNot(node => stateMachine.incidentEdges(node).isEmpty)
-    orphans.foreach(node =>
-      val other = connected(SupplierOfRandomness.onDemand(maxv = connected.length))
-      Try(stateMachine.putEdgeValue(other, node, createAction(node, other))) match
-        case Failure(exception) => GapModelAlgebra.logger.error(s"Failed to add an edge from $other to $node for reason ${exception.getMessage}")
-        case Success(value) => ()
-    )
 
   def addInitState(allNodes: Array[GuiObject]): GuiObject =
     val maxOutdegree = stateMachine.nodes().asScala.map(node => stateMachine.outDegree(node)).max
@@ -79,6 +83,11 @@ class GapModel extends GapGraphConnectednessFinalizer:
       maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties)
     )
     stateMachine.addNode(newInitNode)
+    val orphans: Array[GuiObject] = allNodes.filter(node =>
+//      GapModelAlgebra.logger.info(s"${stateMachine.inDegree(node)}")
+      stateMachine.incidentEdges(node).isEmpty)
+    orphans.foreach(node =>
+      stateMachine.putEdgeValue(newInitNode, node, createAction(newInitNode, node)))
     val connected: Array[GuiObject] = allNodes.filter(node => stateMachine.outDegree(node) > (if maxOutdegree >= connectedness then connectedness else maxOutdegree - 1))
     connected.foreach(node =>
       stateMachine.putEdgeValue(newInitNode, node, createAction(newInitNode, node)))
@@ -96,7 +105,7 @@ object GapModelAlgebra:
   val actionRange: Int = getConfigEntry(ACTIONRANGE, ACTIONRANGEDEFAULT)
   val connectedness: Int = getConfigEntry(CONNECTEDNESS, CONNECTEDNESSDEFAULT)
 
-  def apply(): GapGraph = new GapModel().generateModel()
+  def apply(forceLinkOrphans: Boolean = true): GapGraph = new GapModel().generateModel(forceLinkOrphans)
 
 //  each node of the graph is a GuiObject that corresponds to a GUI screen, which is a tree of GuiObjects
   @main def runGapModelAlgebra(args: String*): Unit =

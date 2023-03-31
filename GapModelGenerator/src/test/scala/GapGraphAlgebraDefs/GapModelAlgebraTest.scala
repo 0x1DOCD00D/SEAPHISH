@@ -8,9 +8,10 @@ import org.mockito.Mockito.{mock, when}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.mockito.MockitoSugar
+import org.slf4j.Logger
 
 class GapModelAlgebraTest extends AnyFlatSpec with Matchers with MockitoSugar {
-  val logger = CreateLogger(this.getClass)
+  val logger: Logger = CreateLogger(this.getClass)
   behavior of "Gap graph generation"
 
   it should "test a mock" in {
@@ -24,18 +25,15 @@ class GapModelAlgebraTest extends AnyFlatSpec with Matchers with MockitoSugar {
   it should "create a small gap graph" in {
     val graph: GapGraph = GapModelAlgebra()
 
-    logger.info(s"Generated ${graph.totalNodes} nodes in the graph")
     val am = graph.adjacencyMatrix
     logger.info("\n" + graph.toCsv(am))
-    logger.info(graph.degrees.mkString(", "))
-    val outConnect: List[Int] = am.flatMap(nodeRow => List(nodeRow.filter(_ < Float.PositiveInfinity).length)).toList
-    logger.info(outConnect.mkString(", "))
+    graph.degrees shouldBe List((3,3), (1,1), (3,2), (3,1), (2,1), (0,4))
+    am.flatMap(nodeRow => List(nodeRow.count(_ < Float.PositiveInfinity))).toList shouldBe List(3, 1, 2, 1, 1, 4)
 
     GapModelAlgebra.statesTotal shouldBe 5
+    GapModelAlgebra.connectedness shouldBe 3
     GapModelAlgebra.edgeProbability shouldBe 0.3
-    graph.totalNodes should be <= 5+1
-    graph.degrees.map(_._2) shouldBe outConnect
-    graph.degrees.maxBy(_._2) should be >= graph.degrees.maxBy(_._2)
+    graph.totalNodes should be <= GapModelAlgebra.statesTotal+1
   }
 
 }

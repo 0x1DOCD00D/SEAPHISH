@@ -44,11 +44,10 @@ object SupplierOfRandomness extends MutableBookeeping4Efficiency:
       case (gen, offset, lst) => currGenInt = gen; currOffsetInt += offset; lst.asInstanceOf[List[Double]]
     }
 
-
   private val seed: Option[Long] = Try(SPSConstants.globalConfig.getLong(SEED)) match {
     case scala.util.Success(value) =>
       Try(value) match {
-        case scala.util.Success(value) => Some(value.asInstanceOf[Long])
+        case scala.util.Success(value) => Some(value)
         case scala.util.Failure(_) => None
       }
     case scala.util.Failure(_) => None

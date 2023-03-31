@@ -1,12 +1,15 @@
 package GapGraphAlgebraDefs
 
+import Utilz.CreateLogger
 import com.google.common.graph.*
+import org.slf4j.Logger
 
 import scala.collection.immutable.TreeSeqMap.OrderBy
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
 case class GapGraph(sm: GuiStateMachine, initState: GuiObject):
+  val logger: Logger = CreateLogger(classOf[GapGraph])
   def degrees: List[(Int, Int)] = sm.nodes().asScala.toList.map(node => (sm.inDegree(node), sm.outDegree(node)))
 
   def totalNodes: Int = sm.nodes().asScala.count(_ => true)
