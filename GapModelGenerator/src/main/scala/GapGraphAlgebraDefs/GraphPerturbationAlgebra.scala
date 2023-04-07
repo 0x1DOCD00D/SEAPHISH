@@ -31,7 +31,6 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
       //    Suppose that the max distance is 5 and the distance coefficient is 0.2.
       //    Then the min distance to apply perturbation is 5*0.2 = 1
       val minDistance2ApplyPerturbation = maxDistance * GapModelAlgebra.distanceCoeff
-      val unperturbedNodes: Seq[GuiObject] = distances.filter(_._2 < minDistance2ApplyPerturbation).keySet.toSeq
       val nodesToApplyPerturbation: Seq[GuiObject] = distances.filter(_._2 >= minDistance2ApplyPerturbation).keySet.toSeq
       if nodesToApplyPerturbation.isEmpty then
         logger.error(s"No nodes exist beyond the distance threshold of $minDistance2ApplyPerturbation")
@@ -58,7 +57,7 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
     import scala.jdk.OptionConverters.*
     val allNodes: List[GuiObject] = newModel.sm.nodes().asScala.toList
     if allNodes.contains(node) then
-      allNodes.map {
+      val modificationRecord: ModificationRecord = allNodes.map {
         otherNode =>
           if otherNode != node && newModel.sm.hasEdgeConnecting(node, otherNode) then
             newModel.sm.edgeValue(node, otherNode).asInstanceOf[Option[Action]] match
@@ -72,7 +71,13 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
               case None => None
           else None
       }.toVector.asInstanceOf[ModificationRecord]
-    else Vector()
+      if newModel.sm.removeNode(node) then modificationRecord
+      else
+        logger.error(s"Failed to remove node $node")
+        Vector()
+    else
+      logger.error(s"Node $node does not exist in the model")
+      Vector()
 
   private def addNode(node: GuiObject): ModificationRecord =
     val newNode: GuiObject = GuiObject(newModel.sm.nodes().asScala.map(_.id).max + 1, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
@@ -80,11 +85,34 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
       maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
       maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties))
     val newEdge: Action = GapModelAlgebra.createAction(node, newNode)
-    Vector((OriginalGapComponent(node), NodeAdded(newNode)), (OriginalGapComponent(node), EdgeAdded(newEdge)))
+    if newModel.sm.addNode(newNode) then
+      Try(newModel.sm.putEdgeValue(node, newNode, newEdge)) match
+        case Success(_) => Vector((OriginalGapComponent(node), NodeAdded(newNode)), (OriginalGapComponent(node), EdgeAdded(newEdge)))
+        case Failure(exception) =>
+          logger.error(s"Failed to add edge $newEdge for new node $newNode")
+          Vector()
+    else
+      logger.error(s"Failed to add node $newNode")
+      Vector()
 
   private def modifyNode(node: GuiObject): ModificationRecord =
+    import scala.jdk.OptionConverters.*
     val modifiedNode: GuiObject = node.modify
-    Vector((OriginalGapComponent(node), NodeModified(modifiedNode)))
+    val adjacentNodes = newModel.sm.adjacentNodes(node)
+    Try(adjacentNodes.add(node)) match
+      case Success(_) =>
+        val inducedGraph: MutableValueGraph[GuiObject, Action] = Graphs.inducedSubgraph(newModel.sm, adjacentNodes)
+        val preds = inducedGraph.predecessors(node).asScala.toList
+        val succ = inducedGraph.successors(node).asScala.toList
+        newModel.sm.removeNode(node)
+        newModel.sm.addNode(modifiedNode)
+        preds.foreach(pred => newModel.sm.putEdgeValue(pred, modifiedNode, inducedGraph.edgeValue(pred, node).get))
+        succ.foreach(succ => newModel.sm.putEdgeValue(modifiedNode, succ, inducedGraph.edgeValue(node, succ).get))
+        Vector((OriginalGapComponent(node), NodeModified(modifiedNode)))
+      case Failure(exception) =>
+        logger.error(s"Failed to modify node $node when obtaining the adjacent nodes for reason $exception")
+        Vector()
+
 
   private def findEdge(node: GuiObject, toConnectedNode: Boolean = true): Option[(GuiObject, Action)] =
     import scala.jdk.OptionConverters.*
