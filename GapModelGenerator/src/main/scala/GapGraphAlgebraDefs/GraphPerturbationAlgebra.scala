@@ -1,104 +1,152 @@
 package GapGraphAlgebraDefs
 
+import GapGraphAlgebraDefs.GapModelAlgebra.{maxBranchingFactor, maxDepth, maxProperties, propValueRange}
+import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{ACTIONS, EdgeAdded, EdgeModified, EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, OriginalGapComponent, Perturbation, logger}
+import Randomizer.SupplierOfRandomness
+import Utilz.CreateLogger
+
 import scala.util.{Failure, Success, Try}
 import com.google.common.graph.*
+import org.slf4j.Logger
 
 import scala.collection.immutable.TreeSeqMap.OrderBy
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
+//  six types of perturbations: node modified, node removed, edge removed, edge is modified, new node is added with edges, new edge is added to some existing node
+class GraphPerturbationAlgebra(originalModel: GapGraph):
+  import GraphPerturbationAlgebra.*
+  private val newModel: GapGraph = originalModel.copy()
+  private val distances: Map[GuiObject, Double] = newModel.distances().toSeq.sortBy(_._2).toMap
+  private val (minDistance, maxDistance) = (distances.minBy(_._2)._2, distances.maxBy(_._2)._2)
+  private val range: Double = maxDistance - minDistance
+  def perturbModel: (GapGraph, ModificationRecord) =
+    require(GapModelAlgebra.perturbationCoeff > 0 && GapModelAlgebra.perturbationCoeff <= 1, "The perturbation coefficient must be between 0 and 1")
+    require(GapModelAlgebra.distanceCoeff >= 0 && GapModelAlgebra.distanceCoeff <= 1, "The distance percentile must be between 0 and 1")
+
+    if range < GapModelAlgebra.distanceSpreadThreshold then
+      logger.error(s"The range of distances, $range must be greater than the threshold ${GapModelAlgebra.distanceSpreadThreshold}")
+      (newModel, Vector())
+    else
+      //    Suppose that the max distance is 5 and the distance coefficient is 0.2.
+      //    Then the min distance to apply perturbation is 5*0.2 = 1
+      val minDistance2ApplyPerturbation = maxDistance * GapModelAlgebra.distanceCoeff
+      val unperturbedNodes: Seq[GuiObject] = distances.filter(_._2 < minDistance2ApplyPerturbation).keySet.toSeq
+      val nodesToApplyPerturbation: Seq[GuiObject] = distances.filter(_._2 >= minDistance2ApplyPerturbation).keySet.toSeq
+      if nodesToApplyPerturbation.isEmpty then
+        logger.error(s"No nodes exist beyond the distance threshold of $minDistance2ApplyPerturbation")
+        (newModel, Vector())
+      else
+        val yesOrNo: Iterator[Boolean] = SupplierOfRandomness.randProbs(2 * nodesToApplyPerturbation.length).map(_ >= GapModelAlgebra.perturbationCoeff).iterator
+        (newModel, nodesToApplyPerturbation.toList.foldLeft(Vector[(OriginalGapComponent, Perturbation)]())((acc, node) => if yesOrNo.next() then perturbNode(node) ++ acc else acc))
+    end if
+
+  private def perturbNode(node: GuiObject): ModificationRecord =
+    ACTIONS.fromOrdinal(SupplierOfRandomness.onDemand(ACTIONS.values.map(_.ordinal).toList.max)) match
+      case ACTIONS.ADDNODE => addNode(node)
+      case ACTIONS.MODIFYNODE => modifyNode(node)
+      case ACTIONS.REMOVENODE => removeNode(node)
+      case ACTIONS.ADDEDGE => addEdge(node)
+      case ACTIONS.MODIFYEDGE => modifyEdge(node)
+      case ACTIONS.REMOVEEDGE => removeEdge(node)
+
+  /*
+  * Iterate through all nodes, and for each node, iterate through all its predecessors and successors.
+  * If the predecessor or successor is the node to be removed, then mark the edge removed.
+  * */
+  private def removeNode(node: GuiObject): ModificationRecord =
+    import scala.jdk.OptionConverters.*
+    val allNodes: List[GuiObject] = newModel.sm.nodes().asScala.toList
+    if allNodes.contains(node) then
+      allNodes.map {
+        otherNode =>
+          if otherNode != node && newModel.sm.hasEdgeConnecting(node, otherNode) then
+            newModel.sm.edgeValue(node, otherNode).asInstanceOf[Option[Action]] match
+              case Some(edge) =>
+                (OriginalGapComponent(edge), EdgeRemoved(edge))
+              case None => None
+          else if otherNode != node && newModel.sm.hasEdgeConnecting(otherNode, node) then
+            newModel.sm.edgeValue(otherNode, node).toScala match
+              case Some(edge) =>
+                (OriginalGapComponent(edge), EdgeRemoved(edge))
+              case None => None
+          else None
+      }.toVector.asInstanceOf[ModificationRecord]
+    else Vector()
+
+  private def addNode(node: GuiObject): ModificationRecord =
+    val newNode: GuiObject = GuiObject(newModel.sm.nodes().asScala.map(_.id).max + 1, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
+      SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
+      maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
+      maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties))
+    val newEdge: Action = GapModelAlgebra.createAction(node, newNode)
+    Vector((OriginalGapComponent(node), NodeAdded(newNode)), (OriginalGapComponent(node), EdgeAdded(newEdge)))
+
+  private def modifyNode(node: GuiObject): ModificationRecord =
+    val modifiedNode: GuiObject = node.modify
+    Vector((OriginalGapComponent(node), NodeModified(modifiedNode)))
+
+  private def findEdge(node: GuiObject, toConnectedNode: Boolean = true): Option[(GuiObject, Action)] =
+    import scala.jdk.OptionConverters.*
+    val allNodes: List[GuiObject] = newModel.sm.nodes().asScala.toList
+    val nodesLambda: GuiObject => Boolean = (otherNode: GuiObject) => otherNode != node &&
+      (newModel.sm.hasEdgeConnecting(node, otherNode) ||
+        newModel.sm.hasEdgeConnecting(otherNode, node))
+    val foundNodes: Array[GuiObject] =
+      if allNodes.contains(node) then
+        if toConnectedNode then allNodes.filter(nodesLambda).toArray[GuiObject] else allNodes.filterNot(nodesLambda).toArray[GuiObject]
+      else Array()
+
+    if foundNodes.nonEmpty then None
+    else
+      val chosenNode: GuiObject = foundNodes(SupplierOfRandomness.onDemand(maxv = foundNodes.length))
+      if toConnectedNode then
+          newModel.sm.edgeValue(node, chosenNode).toScala match
+            case Some(edge) => Option((chosenNode, edge))
+            case None => newModel.sm.edgeValue(chosenNode, node).toScala match
+              case Some(edge) => Option((chosenNode, edge))
+              case None => None
+      else Option((chosenNode, null))
+
+
+  private def removeEdge(node: GuiObject): ModificationRecord =
+    findEdge(node) match
+      case Some((_, edge)) => Vector((OriginalGapComponent(edge), EdgeRemoved(edge)))
+      case None => Vector()
+
+  private def addEdge(node: GuiObject): ModificationRecord =
+    findEdge(node, toConnectedNode = false) match
+      case Some((connectedNode, _)) =>
+        val newEdge: Action = GapModelAlgebra.createAction(node, connectedNode)
+        Vector((OriginalGapComponent(node), EdgeAdded(newEdge)))
+      case None => Vector()
+
+  private def modifyEdge(node: GuiObject): ModificationRecord =
+    findEdge(node) match
+      case Some((connectedNode, edge)) =>
+        val modifiedEdge: Action = edge.modify
+        Vector((OriginalGapComponent(edge), EdgeModified(modifiedEdge)))
+      case None => Vector()
+
 object GraphPerturbationAlgebra:
   trait Perturbation
 
+  case class NodeModified(node: GuiObject) extends Perturbation
   case class NodeRemoved(node: GuiObject) extends Perturbation
-
   case class NodeAdded(node: GuiObject) extends Perturbation
-
   case class EdgeRemoved(edge: Action) extends Perturbation
-
   case class EdgeAdded(edge: Action) extends Perturbation
+  case class EdgeModified(action: Action) extends Perturbation
 
-  case class OriginalGapComponent(node: Option[GapGraphComponent])
+  case class OriginalGapComponent(node: GapGraphComponent)
 
-  type ModificationRecord = Map[OriginalGapComponent, Perturbation]
-
-  //  six types of perturbations: node modified, node removed, edge removed, edge is modified, new node is added with edges, new edge is added to some existing node
-/*
-  def perturbModel(model: GapGraph, perturbationCoefficient: Double, distancePercentile: Double): (GapGraph, ModificationRecord) =
-    require(perturbationCoefficient > 0 && perturbationCoefficient <= 1, "The perturbation coefficient must be between 0 and 1")
-    require(distancePercentile > 0 && distancePercentile <= 1, "The distance percentile must be between 0 and 1")
-    val distances: Map[GuiObject, Double] = model.distances().toSeq.sortBy(_._2).toMap
-    val (minDistance, maxDistance) = (distances.minBy(_._2)._2, distances.maxBy(_._2)._2)
-    val modelClone = model.copy()
-
-    def verifyDistance(node: GuiObject): Boolean =
-      val range: Double = maxDistance - minDistance
-      require(range > 1E-20, "The range of distances must be greater than 0")
-      val percentile = (distances(node) - minDistance) / range
-      percentile >= distancePercentile
-
-    def chooseNodeRandomlyAtDistance(): GuiObject =
-      val nodesAtDistance: Array[GuiObject] = distances.filter(_._2 >= distancePercentile).keys.toArray
-      nodesAtDistance(scala.util.Random.nextInt(nodesAtDistance.length))
-
-    def removeNode(node: GuiObject, modification: ModificationRecord): ModificationRecord = if modelClone.sm.removeNode(node) then
-      modification + (OriginalGapComponent(Some(node)) -> NodeRemoved(node)) else modification
-
-    def addNode(modification: ModificationRecord): ModificationRecord =
-      val newNode: GuiObject = GuiObject(modelClone.sm.nodes().asScala.map(_.id).max + 1, scala.util.Random.nextInt(maxBranchingFactor), scala.util.Random.nextInt(maxProperties))
-      val allNodes: Array[GuiObject] = modelClone.sm.nodes().asScala.toArray
-      val modz = allNodes.foldLeft(Map[OriginalGapComponent, Modification]())((acc, node) =>
-        if UniformProbGenerator().head < perturbationCoefficient && verifyDistance(node) then
-          val edge = createAction(node, newNode)
-          stateMachine.putEdgeValue(node, newNode, edge)
-          acc + (OriginalGapComponent(None) -> EdgeAdded(edge))
-        else acc
-      )
-      modification ++ modz + (OriginalGapComponent(None) -> NodeAdded(newNode))
-
-    def modifyNode(modification: ModificationRecord): ModificationRecord =
-      import scala.jdk.OptionConverters.*
-      val allNodes: Array[GuiObject] = modelClone.sm.nodes().asScala.toArray
-      val victim: GuiObject = allNodes(scala.util.Random.nextInt(allNodes.length))
-      val newNode: GuiObject = GuiObject(victim.id, scala.util.Random.nextInt(maxBranchingFactor), scala.util.Random.nextInt(maxProperties))
-      val pred = modelClone.sm.predecessors(victim).asScala
-      val succ = modelClone.sm.successors(victim).asScala
-      modelClone.sm.addNode(newNode)
-      pred.foreach(node =>
-        modelClone.sm.edgeValue(node, victim).toScala match
-          case Some(edge) =>
-            modelClone.sm.removeEdge(node, victim)
-            modelClone.sm.putEdgeValue(node, newNode, edge)
-            ()
-          case None => ()
-      )
-      succ.foreach(node =>
-        modelClone.sm.edgeValue(victim, node).toScala match
-          case Some(edge) =>
-            modelClone.sm.removeEdge(victim, node)
-            modelClone.sm.putEdgeValue(newNode, node, edge)
-            ()
-          case None => ()
-      )
-      modification + (OriginalGapComponent(Some(victim)) -> NodeRemoved(victim)) + (OriginalGapComponent(Some(victim)) -> NodeAdded(newNode))
+  type ModificationRecord = Vector[(OriginalGapComponent, Perturbation)]
 
 
-    def removeEdge(node: GuiObject, other: GuiObject, modification: ModificationRecord): ModificationRecord =
-      val edge = modelClone.sm.removeEdge(node, other)
-      if edge == null then modification else
-        modification + (OriginalGapComponent(Some(edge)) -> EdgeRemoved(edge))
+  enum ACTIONS:
+    case REMOVENODE, ADDNODE, MODIFYNODE, REMOVEEDGE, ADDEDGE, MODIFYEDGE
 
-    def modifyEdge(node: GuiObject, other: GuiObject, modification: ModificationRecord): ModificationRecord =
-      val edge = modelClone.sm.removeEdge(node, other)
-      if edge == null then modification else
-        val newEdge: Action = edge.copy(resultingValue = Some(scala.util.Random.nextInt(propValueRange)), cost = UniformProbGenerator().head)
-        Try(modelClone.sm.putEdgeValue(node, other, newEdge)) match
-          case Success(_) => modification + (OriginalGapComponent(Some(edge)) -> EdgeAdded(newEdge)) + (OriginalGapComponent(Some(edge)) -> EdgeRemoved(edge))
-          case Failure(_) => modification + (OriginalGapComponent(Some(edge)) -> EdgeRemoved(edge))
+  val logger: Logger = CreateLogger(classOf[GraphPerturbationAlgebra.type])
 
-    null
-  //    (modelClone, removedEntities.toSet)
-
-  end perturbModel
-
-*/
+  def apply(originalModel: GapGraph): (GapGraph, ModificationRecord) =
+    new GraphPerturbationAlgebra(originalModel).perturbModel

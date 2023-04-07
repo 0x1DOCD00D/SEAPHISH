@@ -19,9 +19,9 @@ case class GuiObject(id: Int, children: Int, props: Int, currentDepth: Int = 1, 
 
   def modify: GuiObject =
     val probs: Iterator[Double] = SupplierOfRandomness.randProbs(properties.length +  childrenObjects.length).iterator
-    val modifiedProperties: List[Int] = properties.map(p => if probs.next() <= GapModelAlgebra.modificationProbability then SupplierOfRandomness.onDemand(maxv = propValueRange) else p)
+    val modifiedProperties: List[Int] = properties.map(p => if probs.next() <= GapModelAlgebra.guiObjectModificationProbability then SupplierOfRandomness.onDemand(maxv = propValueRange) else p)
     val modChildrenObjects: List[GuiObject] = childrenObjects.flatMap( co =>
-      if probs.next() < GapModelAlgebra.modificationProbability then
+      if probs.next() < GapModelAlgebra.guiObjectModificationProbability then
           if SupplierOfRandomness.`YesOrNo?` then
             GuiObject(co.id,
               if SupplierOfRandomness.`YesOrNo?` then SupplierOfRandomness.onDemand(maxv = maxBranchingFactor) else co.maxBranchingFactor,
@@ -33,4 +33,5 @@ case class GuiObject(id: Int, children: Int, props: Int, currentDepth: Int = 1, 
     GuiObject(id, children, props, currentDepth, propValueRange, maxDepth, maxBranchingFactor, maxProperties, modifiedProperties, modChildrenObjects)
 
 
-case class Action(actionType: Int, fromId: Int, toId: Int, resultingValue: Option[Int], cost: Double) extends GapGraphComponent
+case class Action(actionType: Int, fromId: Int, toId: Int, resultingValue: Option[Int], cost: Double) extends GapGraphComponent:
+  def modify: Action = Action(SupplierOfRandomness.onDemand(maxv = GapModelAlgebra.actionRange), fromId, toId, resultingValue, SupplierOfRandomness.randProbs(1).head)

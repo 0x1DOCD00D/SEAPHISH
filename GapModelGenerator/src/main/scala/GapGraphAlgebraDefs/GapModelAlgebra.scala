@@ -1,10 +1,10 @@
 package GapGraphAlgebraDefs
 
-import GapGraphAlgebraDefs.GapModelAlgebra.{actionRange, connectedness, edgeProbability, maxBranchingFactor, maxDepth, maxProperties, propValueRange, statesTotal}
+import GapGraphAlgebraDefs.GapModelAlgebra.{actionRange, connectedness, createAction, edgeProbability, logger, maxBranchingFactor, maxDepth, maxProperties, propValueRange, statesTotal}
 import Randomizer.{SupplierOfRandomness, UniformProbGenerator}
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.{CreateLogger, SPSConstants}
-import Utilz.SPSConstants.{ACTIONRANGE, ACTIONRANGEDEFAULT, CONNECTEDNESS, CONNECTEDNESSDEFAULT, DEFAULTEDGEPROBABILITY, DEFAULTMODIFICATIONPROBABILITY, EDGEPROBABILITY, MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT, MAXDEPTH, MAXDEPTHDEFAULT, MAXPROPERTIES, MAXPROPERTIESDEFAULT, MODIFICATIONPROBABILITY, PROPVALUERANGE, PROPVALUERANGEDEFAULT, SEED, STATESTOTAL, STATESTOTALDEFAULT}
+import Utilz.SPSConstants.{ACTIONRANGE, ACTIONRANGEDEFAULT, CONNECTEDNESS, CONNECTEDNESSDEFAULT, DEFAULTDISTANCECOEFFICIENT, DEFAULTDISTANCESPREADTHRESHOLD, DEFAULTEDGEPROBABILITY, DEFAULTMODIFICATIONPROBABILITY, DEFAULTPERTURBATIONCOEFFICIENT, DISTANCECOEFFICIENT, DISTANCESPREADTHRESHOLD, EDGEPROBABILITY, MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT, MAXDEPTH, MAXDEPTHDEFAULT, MAXPROPERTIES, MAXPROPERTIESDEFAULT, MODIFICATIONPROBABILITY, PERTURBATIONCOEFFICIENT, PROPVALUERANGE, PROPVALUERANGEDEFAULT, SEED, STATESTOTAL, STATESTOTALDEFAULT}
 import com.google.common.graph.*
 import org.slf4j.Logger
 
@@ -27,25 +27,12 @@ class GapModel extends GapGraphConnectednessFinalizer:
 
   private def createNodes(): Unit =
     (1 to statesTotal).foreach(id=>
-      stateMachine.addNode(GuiObject(id, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
+      if !stateMachine.addNode(GuiObject(id, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
         SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
         maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
         maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties)
-        ))
+        )) then logger.error(s"Could not add node with id $id")
       ()
-    )
-
-  private def createAction(from: GuiObject, to: GuiObject): Action =
-    val fCount = from.childrenCount
-    val tCount = to.childrenCount
-    val cost: Double = SupplierOfRandomness.randProbs(1).head
-    require(cost>= 0 && cost <= 1)
-
-    Action(SupplierOfRandomness.onDemand(maxv = actionRange),
-      if fCount > 0 then SupplierOfRandomness.onDemand(maxv = fCount) else 0,
-      if tCount > 0 then SupplierOfRandomness.onDemand(maxv = tCount) else 0,
-      if SupplierOfRandomness.onDemand() % 2 == 0 then None else Some(SupplierOfRandomness.onDemand(maxv = propValueRange)),
-      cost
     )
 
   def generateModel(forceLinkOrphans: Boolean = false): GapGraph =
@@ -96,8 +83,11 @@ class GapModel extends GapGraphConnectednessFinalizer:
 object GapModelAlgebra:
   val logger:Logger = CreateLogger(classOf[GapModel])
 
+  val distanceSpreadThreshold: Double = getConfigEntry(DISTANCESPREADTHRESHOLD, DEFAULTDISTANCESPREADTHRESHOLD)
+  val perturbationCoeff: Double = getConfigEntry(PERTURBATIONCOEFFICIENT, DEFAULTPERTURBATIONCOEFFICIENT)
+  val distanceCoeff: Double = getConfigEntry(DISTANCECOEFFICIENT, DEFAULTDISTANCECOEFFICIENT)
   val edgeProbability: Double = getConfigEntry(EDGEPROBABILITY, DEFAULTEDGEPROBABILITY)
-  val modificationProbability: Double = getConfigEntry(MODIFICATIONPROBABILITY, DEFAULTMODIFICATIONPROBABILITY)
+  val guiObjectModificationProbability: Double = getConfigEntry(MODIFICATIONPROBABILITY, DEFAULTMODIFICATIONPROBABILITY)
   val statesTotal: Int = getConfigEntry(STATESTOTAL, STATESTOTALDEFAULT)
   val maxBranchingFactor: Int = getConfigEntry(MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT)
   val maxDepth: Int = getConfigEntry(MAXDEPTH, MAXDEPTHDEFAULT)
@@ -108,6 +98,20 @@ object GapModelAlgebra:
 
   def apply(forceLinkOrphans: Boolean = true): GapGraph = new GapModel().generateModel(forceLinkOrphans)
 
-//  each node of the graph is a GuiObject that corresponds to a GUI screen, which is a tree of GuiObjects
+  def createAction(from: GuiObject, to: GuiObject): Action =
+    val fCount = from.childrenCount
+    val tCount = to.childrenCount
+    val cost: Double = SupplierOfRandomness.randProbs(1).head
+    require(cost >= 0 && cost <= 1)
+
+    Action(SupplierOfRandomness.onDemand(maxv = actionRange),
+      if fCount > 0 then SupplierOfRandomness.onDemand(maxv = fCount) else 0,
+      if tCount > 0 then SupplierOfRandomness.onDemand(maxv = tCount) else 0,
+      if SupplierOfRandomness.onDemand() % 2 == 0 then None else Some(SupplierOfRandomness.onDemand(maxv = propValueRange)),
+      cost
+    )
+
+
+  //  each node of the graph is a GuiObject that corresponds to a GUI screen, which is a tree of GuiObjects
   @main def runGapModelAlgebra(args: String*): Unit =
     logger.info("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/GapModelGenerator/src/main/scala/GapGraph/GapModelAlgebra.scala created at time 5:42 PM")

@@ -10,6 +10,7 @@ import scala.jdk.CollectionConverters.*
 
 case class GapGraph(sm: GuiStateMachine, initState: GuiObject):
   val logger: Logger = CreateLogger(classOf[GapGraph])
+  def copy: GapGraph = GapGraph(Graphs.copyOf(sm), initState)
   def degrees: List[(Int, Int)] = sm.nodes().asScala.toList.map(node => (sm.inDegree(node), sm.outDegree(node)))
 
   def totalNodes: Int = sm.nodes().asScala.count(_ => true)

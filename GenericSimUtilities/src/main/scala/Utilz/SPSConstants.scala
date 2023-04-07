@@ -12,6 +12,12 @@ object SPSConstants:
   val GAPMODELCONFIGENTRYNAME: String = "GapModel"
   val EDGEPROBABILITY: String = "edgeProbability"
   val DEFAULTEDGEPROBABILITY: Double = 0.3d
+  val DISTANCESPREADTHRESHOLD: String = "distanceSpreadThreshold"
+  val DEFAULTDISTANCESPREADTHRESHOLD: Double = 0.05d
+  val PERTURBATIONCOEFFICIENT: String = "perturbationCoefficient"
+  val DEFAULTPERTURBATIONCOEFFICIENT: Double = 0.1d
+  val DISTANCECOEFFICIENT: String = "perturbationCoefficient"
+  val DEFAULTDISTANCECOEFFICIENT: Double = 0.1d
   val MODIFICATIONPROBABILITY: String = "modificationProbability"
   val DEFAULTMODIFICATIONPROBABILITY: Double = 0.3d
   val STATESTOTAL: String = "statesTotal"

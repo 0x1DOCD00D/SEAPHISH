@@ -14,10 +14,6 @@ class GapModelAlgebraTest extends AnyFlatSpec with Matchers with MockitoSugar {
   val logger: Logger = CreateLogger(this.getClass)
   behavior of "Gap graph generation"
 
-  object FooObject {
-    def simpleMethod: String = "not mocked!"
-  }
-
   it should "test a mock" in {
     import Utilz.ConfigReader
     val crMock = mock[GapModel]
