@@ -9,7 +9,7 @@ val guavaVersion = "31.1-jre"
 val typeSafeConfigVersion = "1.4.2"
 val logbackVersion = "1.2.10"
 val sfl4sVersion = "2.0.0-alpha5"
-
+val graphVizVersion = "0.18.1"
 cinnamonLogLevel := "INFO"
 
 lazy val commonDependencies = Seq(
@@ -32,7 +32,8 @@ lazy val GapModelGenerator = (project in file("GapModelGenerator"))
     name := "GapModelGenerator",
     libraryDependencies ++= commonDependencies ++ Seq(
       //      guava for graphs and tables
-      "com.google.guava" % "guava" % guavaVersion
+      "com.google.guava" % "guava" % guavaVersion,
+      "guru.nidi" % "graphviz-java" % graphVizVersion
     )
   ).dependsOn(Model, GenericSimUtilities)
 
