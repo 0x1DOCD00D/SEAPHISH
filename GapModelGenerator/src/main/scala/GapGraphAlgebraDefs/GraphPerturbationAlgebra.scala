@@ -15,7 +15,6 @@ import scala.collection.immutable.Vector
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
-@annotation.nowarn("marked unstable with @Beta")
 //  six types of perturbations: node modified, node removed, edge removed, edge is modified, new node is added with edges, new edge is added to some existing node
 class GraphPerturbationAlgebra(originalModel: GapGraph):
   import GraphPerturbationAlgebra.*
