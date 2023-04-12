@@ -1,6 +1,6 @@
 package GapGraphAlgebraDefs
 
-import GapGraphAlgebraDefs.GraphPerturbationAlgebra.ModificationRecord
+import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{ModificationRecord, NodeAdded, OriginalGapComponent}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
@@ -45,6 +45,6 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     logger.info(modificationRecord.toString)
     logger.info(graph.sm.toString)
     modificationRecord.size shouldBe 2
-
+    modificationRecord.find(_._1 == OriginalGapComponent(node3)) shouldBe Some(OriginalGapComponent(node3), NodeAdded(GuiObject(4,0,2,1,9,1,2,0,List(),List())))
   }
 }
