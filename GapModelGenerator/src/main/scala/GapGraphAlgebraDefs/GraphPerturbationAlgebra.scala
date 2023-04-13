@@ -9,6 +9,7 @@ import scala.util.{Failure, Success, Try}
 import com.google.common.graph.*
 import org.slf4j.Logger
 
+import java.util
 import scala.annotation.tailrec
 import scala.collection.immutable.TreeSeqMap.OrderBy
 import scala.collection.immutable.Vector
@@ -57,20 +58,18 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
     import scala.jdk.OptionConverters.*
     val allNodes: List[GuiObject] = newModel.sm.nodes().asScala.toList
     if allNodes.contains(node) then
-      val modificationRecord: ModificationRecord = allNodes.map {
-        otherNode =>
-          if otherNode != node && newModel.sm.hasEdgeConnecting(node, otherNode) then
-            newModel.sm.edgeValue(node, otherNode).asInstanceOf[Option[Action]] match
-              case Some(edge) =>
-                (OriginalGapComponent(edge), EdgeRemoved(edge))
-              case None => None
-          else if otherNode != node && newModel.sm.hasEdgeConnecting(otherNode, node) then
-            newModel.sm.edgeValue(otherNode, node).toScala match
-              case Some(edge) =>
-                (OriginalGapComponent(edge), EdgeRemoved(edge))
-              case None => None
-          else None
-      }.toVector.asInstanceOf[ModificationRecord]
+      val modificationRecord:ModificationRecord = newModel.sm.predecessors(node).asScala.toList.flatMap {pn =>
+        newModel.sm.edgeValue(pn, node).toScala match
+          case Some(edge) =>
+            Vector((OriginalGapComponent(node), NodeRemoved(node)), (OriginalGapComponent(node), EdgeRemoved(edge)))
+          case None => None
+      }.toVector ++ newModel.sm.successors(node).asScala.toList.flatMap { sn =>
+        newModel.sm.edgeValue(node, sn).toScala match
+          case Some(edge) =>
+            Vector((OriginalGapComponent(node), NodeRemoved(node)), (OriginalGapComponent(node), EdgeRemoved(edge)))
+          case None => None
+      }.toVector
+
       if newModel.sm.removeNode(node) then modificationRecord
       else
         logger.error(s"Failed to remove node $node")

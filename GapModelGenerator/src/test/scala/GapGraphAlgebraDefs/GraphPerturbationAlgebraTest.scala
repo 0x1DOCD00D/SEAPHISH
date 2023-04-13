@@ -1,6 +1,6 @@
 package GapGraphAlgebraDefs
 
-import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{ModificationRecord, NodeAdded, OriginalGapComponent}
+import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{EdgeRemoved, ModificationRecord, NodeAdded, NodeRemoved, OriginalGapComponent}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
@@ -15,6 +15,9 @@ import org.slf4j.Logger
 
 class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with MockitoSugar with PrivateMethodTester {
   val logger: Logger = CreateLogger(this.getClass)
+
+  val ADDNODEMETHOD = "addNode"
+  val REMOVENODEMETHOD = "removeNode"
 
   val node1: GuiObject = GuiObject(id = 1, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
   val node2: GuiObject = GuiObject(id = 2, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
@@ -40,11 +43,22 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
   it should "add a new node to the graph" in {
     val graph = createTestGraph()
     val algebra = new GraphPerturbationAlgebra(graph)
-    val theAddNodeFunc = PrivateMethod[ModificationRecord](Symbol("addNode"))
-    val modificationRecord:ModificationRecord = algebra invokePrivate theAddNodeFunc(node3)
+    val theFunc = PrivateMethod[ModificationRecord](Symbol(ADDNODEMETHOD))
+    val modificationRecord:ModificationRecord = algebra invokePrivate theFunc(node3)
     logger.info(modificationRecord.toString)
     logger.info(graph.sm.toString)
     modificationRecord.size shouldBe 2
     modificationRecord.find(_._1 == OriginalGapComponent(node3)) shouldBe Some(OriginalGapComponent(node3), NodeAdded(GuiObject(4,0,2,1,9,1,2,0,List(),List())))
+  }
+
+  it should "remove a node from the graph" in {
+    val graph = createTestGraph()
+    val algebra = new GraphPerturbationAlgebra(graph)
+    val theFunc = PrivateMethod[ModificationRecord](Symbol(REMOVENODEMETHOD))
+    val modificationRecord: ModificationRecord = algebra invokePrivate theFunc(node1)
+    logger.info(modificationRecord.toString)
+    logger.info(graph.sm.toString)
+    graph.sm.nodes().size shouldBe 2
+    modificationRecord shouldBe Vector((OriginalGapComponent(GuiObject(1,5,10,1,20,5,5,10,List(),List())),NodeRemoved(GuiObject(1,5,10,1,20,5,5,10,List(),List()))), (OriginalGapComponent(GuiObject(1,5,10,1,20,5,5,10,List(),List())),EdgeRemoved(Action(1,1,2,Some(12),0.12))))
   }
 }
