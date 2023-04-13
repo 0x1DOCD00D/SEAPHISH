@@ -1,6 +1,6 @@
 package GapGraphAlgebraDefs
 
-import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, NodeRemoved, OriginalGapComponent}
+import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{EdgeAdded, EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, NodeRemoved, OriginalGapComponent}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
@@ -19,6 +19,9 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
   val ADDNODEMETHOD = "addNode"
   val REMOVENODEMETHOD = "removeNode"
   val MODIFYNODEMETHOD = "modifyNode"
+  val ADDEDGEMETHOD = "addEdge"
+  val REMOVEEDGEMETHOD = "removeEdge"
+  val MODIFYEDGEMETHOD = "modifyEdge"
 
   val node1: GuiObject = GuiObject(id = 1, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
   val node2: GuiObject = GuiObject(id = 2, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
@@ -63,15 +66,49 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     modificationRecord shouldBe Vector((OriginalGapComponent(GuiObject(1,5,10,1,20,5,5,10)),NodeRemoved(GuiObject(1,5,10,1,20,5,5,10))), (OriginalGapComponent(GuiObject(1,5,10,1,20,5,5,10)),EdgeRemoved(Action(1,1,2,Some(12),0.12))))
   }
 
-  it should "modify a node in the graph" in {
+  it should "add an edge to the graph" in {
     val graph = createTestGraph()
     val algebra = new GraphPerturbationAlgebra(graph)
-    val theFunc = PrivateMethod[ModificationRecord](Symbol(MODIFYNODEMETHOD))
-    val modificationRecord: ModificationRecord = algebra invokePrivate theFunc(node2)
+    val theFunc = PrivateMethod[ModificationRecord](Symbol(ADDEDGEMETHOD))
+    graph.sm.hasEdgeConnecting(node3, node1) shouldBe false
+    graph.sm.edges().size shouldBe 2
+    val modificationRecord: ModificationRecord = algebra invokePrivate theFunc(node3, node1)
     logger.info(modificationRecord.toString)
     logger.info(graph.sm.toString)
-    graph.sm.nodes().size shouldBe 3
-    modificationRecord shouldBe Vector((OriginalGapComponent(GuiObject(2,5,10,1,20,5,5,10)),NodeModified(GuiObject(2,5,10,1,10,5,10,10))))
+    graph.sm.edges().size shouldBe 3
+    graph.sm.hasEdgeConnecting(node3, node1) shouldBe true
+    modificationRecord(0)._1.node shouldBe GuiObject(3,5,10,1,20,5,5,10)
+  }
+
+  it should "remove an edge from the graph" in {
+    val graph = createTestGraph()
+    val algebra = new GraphPerturbationAlgebra(graph)
+    val theFunc = PrivateMethod[ModificationRecord](Symbol(REMOVEEDGEMETHOD))
+    graph.sm.hasEdgeConnecting(node2, node3) shouldBe true
+    graph.sm.edges().size shouldBe 2
+    val modificationRecord: ModificationRecord = algebra invokePrivate theFunc(node2, node3)
+    logger.info(modificationRecord.toString)
+    logger.info(graph.sm.toString)
+    graph.sm.edges().size shouldBe 1
+    graph.sm.hasEdgeConnecting(node2, node3) shouldBe false
+    modificationRecord(0)._1.node shouldBe GuiObject(2, 5, 10, 1, 20, 5, 5, 10)
+  }
+
+  it should "modify an edge in the graph" in {
+    val graph = createTestGraph()
+    val algebra = new GraphPerturbationAlgebra(graph)
+    val theFunc = PrivateMethod[ModificationRecord](Symbol(MODIFYEDGEMETHOD))
+    graph.sm.hasEdgeConnecting(node2, node3) shouldBe true
+    val oldEdge = graph.sm.edgeValue(node2, node3).get
+    graph.sm.edges().size shouldBe 2
+    val modificationRecord: ModificationRecord = algebra invokePrivate theFunc(node2, node3)
+    logger.info(modificationRecord.toString)
+    logger.info(graph.sm.toString)
+    graph.sm.edges().size shouldBe 2
+    graph.sm.hasEdgeConnecting(node2, node3) shouldBe true
+    val newEdge = graph.sm.edgeValue(node2, node3).get
+    modificationRecord(0)._1.node shouldBe GuiObject(2, 5, 10, 1, 20, 5, 5, 10)
+    oldEdge should not be newEdge
   }
 
 }

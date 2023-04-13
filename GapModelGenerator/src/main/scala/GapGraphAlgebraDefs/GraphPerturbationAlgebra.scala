@@ -109,6 +109,15 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
     succ.foreach(succ => newModel.sm.putEdgeValue(modifiedNode, succ, inducedGraph.edgeValue(node, succ).get))
     Vector((OriginalGapComponent(node), NodeModified(modifiedNode)))
 
+  private def doTheEdge(node: GuiObject, foundNodes: Array[GuiObject], op: (GuiObject, GuiObject)=>ModificationRecord): ModificationRecord =
+    if foundNodes.nonEmpty then
+      if foundNodes.length == 1 then
+        val chosenNode: GuiObject = foundNodes.head
+        op(node, chosenNode)
+      else
+        val chosenNode: GuiObject = foundNodes(SupplierOfRandomness.onDemand(maxv = foundNodes.length))
+        op(node, chosenNode)
+    else Vector()
 
   private def operationOnEdges(node: GuiObject, action: ACTIONS): ModificationRecord =
     import scala.jdk.OptionConverters.*
@@ -118,26 +127,15 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
         newModel.sm.hasEdgeConnecting(otherNode, node))
     if allNodes.contains(node) then
       action match
-        case ACTIONS.ADDEDGE =>
-          val foundNodes: Array[GuiObject] = allNodes.filterNot(nodesLambda).toArray[GuiObject]
-          if foundNodes.nonEmpty then
-            val chosenNode: GuiObject = foundNodes(SupplierOfRandomness.onDemand(maxv = foundNodes.length))
-            addEdge(node, chosenNode)
-          else Vector()
-        case ACTIONS.REMOVEEDGE =>
-          val foundNodes: Array[GuiObject] = allNodes.filter(nodesLambda).toArray[GuiObject]
-          if foundNodes.nonEmpty then
-            val chosenNode: GuiObject = foundNodes(SupplierOfRandomness.onDemand(maxv = foundNodes.length))
-            removeEdge(node, chosenNode)
-          else Vector()
-        case ACTIONS.MODIFYNODE =>
-          val foundNodes: Array[GuiObject] = allNodes.filter(nodesLambda).toArray[GuiObject]
-          if foundNodes.nonEmpty then
-            val chosenNode: GuiObject = foundNodes(SupplierOfRandomness.onDemand(maxv = foundNodes.length))
-            modifyEdge(node, chosenNode)
-          else Vector()
-        case _ => Vector()
-    else Vector()
+        case ACTIONS.ADDEDGE => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[GuiObject], addEdge)
+        case ACTIONS.REMOVEEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[GuiObject], removeEdge)
+        case ACTIONS.MODIFYEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[GuiObject], modifyEdge)
+        case _ =>
+          logger.error(s"Invalid action $action")
+          Vector()
+    else
+      logger.error(s"Node $node does not exist in the model")
+      Vector()
   @tailrec
   private def removeEdge(node: GuiObject, chosenNode: GuiObject): ModificationRecord =
     import scala.jdk.OptionConverters.*
@@ -153,20 +151,19 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
       else
         logger.error(s"No edge exist from $node to $chosenNode but it should be there")
         Vector()
-    else removeEdge(chosenNode, node)
+    else if newModel.sm.hasEdgeConnecting(chosenNode, node) then removeEdge(chosenNode, node)
+    else Vector()
 
-  private def addEdge(node: GuiObject, chosenNode: GuiObject, newEdge2Add: Option[Action] = None): ModificationRecord =
-    if newModel.sm.hasEdgeConnecting(node, chosenNode) then
-      logger.error(s"Edge from $node to $chosenNode already exists and new edge cannot be added")
-      Vector()
+  private def addEdge(node: GuiObject, chosenNode: GuiObject): ModificationRecord =
+    import scala.jdk.OptionConverters.*
+    val edge2Modify: Option[Action] = newModel.sm.edgeValue(node, chosenNode).toScala
+    val newEdge: Action = if edge2Modify.isEmpty then GapModelAlgebra.createAction(node, chosenNode) else edge2Modify.get.modify
+    if newModel.sm.putEdgeValue(node, chosenNode, newEdge) == null then
+      logger.info(s"Added edge $newEdge from $node to $chosenNode successfully to create a new perturbed model")
+      Vector((OriginalGapComponent(node), EdgeAdded(newEdge)))
     else
-      val newEdge: Action = if newEdge2Add.isEmpty then GapModelAlgebra.createAction(node, chosenNode) else newEdge2Add.get
-      if newModel.sm.putEdgeValue(node, chosenNode, newEdge) == null then
-        logger.info(s"Added edge $newEdge from $node to $chosenNode successfully to create a new perturbed model")
-        Vector((OriginalGapComponent(node), EdgeAdded(newEdge)))
-      else
-        logger.error(s"Failed to add edge from $node to $chosenNode")
-        Vector()
+      logger.error(s"Failed to add edge from $node to $chosenNode")
+      Vector()
 
   @tailrec
   private def modifyEdge(node: GuiObject, chosenNode: GuiObject): ModificationRecord =
@@ -177,8 +174,7 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
         logger.error(s"No edge exist from $node to $chosenNode but it should be there")
         Vector()
       else
-        val modifiedEdge: Action = edge2Modify.get.modify
-        Vector((OriginalGapComponent(node), EdgeModified(modifiedEdge))) ++ removeEdge(node, chosenNode) ++ addEdge(node, chosenNode, Some(modifiedEdge))
+        Vector((OriginalGapComponent(node), EdgeModified(edge2Modify.get))) ++ removeEdge(node, chosenNode) ++ addEdge(node, chosenNode)
     else modifyEdge(chosenNode, node)
 object GraphPerturbationAlgebra:
   trait Perturbation
