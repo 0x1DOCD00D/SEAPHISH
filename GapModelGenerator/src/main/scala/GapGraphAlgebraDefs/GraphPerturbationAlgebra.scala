@@ -97,20 +97,17 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
   private def modifyNode(node: GuiObject): ModificationRecord =
     import scala.jdk.OptionConverters.*
     val modifiedNode: GuiObject = node.modify
-    val adjacentNodes = newModel.sm.adjacentNodes(node)
-    Try(adjacentNodes.add(node)) match
-      case Success(_) =>
-        val inducedGraph: MutableValueGraph[GuiObject, Action] = Graphs.inducedSubgraph(newModel.sm, adjacentNodes)
-        val preds = inducedGraph.predecessors(node).asScala.toList
-        val succ = inducedGraph.successors(node).asScala.toList
-        newModel.sm.removeNode(node)
-        newModel.sm.addNode(modifiedNode)
-        preds.foreach(pred => newModel.sm.putEdgeValue(pred, modifiedNode, inducedGraph.edgeValue(pred, node).get))
-        succ.foreach(succ => newModel.sm.putEdgeValue(modifiedNode, succ, inducedGraph.edgeValue(node, succ).get))
-        Vector((OriginalGapComponent(node), NodeModified(modifiedNode)))
-      case Failure(exception) =>
-        logger.error(s"Failed to modify node $node when obtaining the adjacent nodes for reason $exception")
-        Vector()
+    val adjacentNodes = newModel.sm.adjacentNodes(node).asScala.toList ::: List(node)
+    logger.info(s"Adjacent nodes of $node are $adjacentNodes")
+    logger.info(s"Modified version of the node of $node $modifiedNode")
+    val inducedGraph: MutableValueGraph[GuiObject, Action] = Graphs.inducedSubgraph(newModel.sm, adjacentNodes.toSet.asJava)
+    val preds = inducedGraph.predecessors(node).asScala.toList
+    val succ = inducedGraph.successors(node).asScala.toList
+    newModel.sm.removeNode(node)
+    newModel.sm.addNode(modifiedNode)
+    preds.foreach(pred => newModel.sm.putEdgeValue(pred, modifiedNode, inducedGraph.edgeValue(pred, node).get))
+    succ.foreach(succ => newModel.sm.putEdgeValue(modifiedNode, succ, inducedGraph.edgeValue(node, succ).get))
+    Vector((OriginalGapComponent(node), NodeModified(modifiedNode)))
 
 
   private def operationOnEdges(node: GuiObject, action: ACTIONS): ModificationRecord =
