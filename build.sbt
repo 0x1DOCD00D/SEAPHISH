@@ -16,7 +16,8 @@ lazy val commonDependencies = Seq(
   "org.scalatest" %% "scalatest" % scalaTestVersion % Test,
   "org.scalatestplus" %% "mockito-4-2" % "3.2.12.0-RC2" % Test,
   "com.typesafe" % "config" % typeSafeConfigVersion,
-  "ch.qos.logback" % "logback-classic" % logbackVersion
+  "ch.qos.logback" % "logback-classic" % logbackVersion,
+  "net.bytebuddy" % "byte-buddy" % "1.14.4"
 )
 
 lazy val root = (project in file("."))
