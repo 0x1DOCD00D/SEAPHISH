@@ -66,6 +66,17 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     modificationRecord shouldBe Vector((OriginalGapComponent(GuiObject(1,5,10,1,20,5,5,10)),NodeRemoved(GuiObject(1,5,10,1,20,5,5,10))), (OriginalGapComponent(GuiObject(1,5,10,1,20,5,5,10)),EdgeRemoved(Action(1,1,2,Some(12),0.12))))
   }
 
+  it should "modify a node from the graph" in {
+    val graph = createTestGraph()
+    val algebra = new GraphPerturbationAlgebra(graph)
+    val theFunc = PrivateMethod[ModificationRecord](Symbol(MODIFYNODEMETHOD))
+    val modificationRecord: ModificationRecord = algebra invokePrivate theFunc(node2)
+    logger.info(modificationRecord.toString)
+    logger.info(graph.sm.toString)
+    graph.sm.nodes().size shouldBe 3
+    modificationRecord shouldBe Vector((OriginalGapComponent(GuiObject(2,5,10,1,20,5,5,10)),NodeModified(GuiObject(2,5,10,1,10,5,10,10))))
+  }
+
   it should "add an edge to the graph" in {
     val graph = createTestGraph()
     val algebra = new GraphPerturbationAlgebra(graph)
@@ -110,5 +121,4 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     modificationRecord(0)._1.node shouldBe GuiObject(2, 5, 10, 1, 20, 5, 5, 10)
     oldEdge should not be newEdge
   }
-
 }
