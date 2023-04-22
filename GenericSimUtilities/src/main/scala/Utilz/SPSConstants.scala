@@ -1,5 +1,6 @@
 package Utilz
 
+import Utilz.SPSConstants.MAXWALKPATHLENGTHCOEFFDEFAULT
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.util.Failure
@@ -34,6 +35,10 @@ object SPSConstants:
   val ACTIONRANGEDEFAULT = 10
   val CONNECTEDNESS = "connectedness"
   val CONNECTEDNESSDEFAULT = 28
+  val MAXWALKPATHLENGTHCOEFF = "maxWalkPathLengthCoeff"
+  val MAXWALKPATHLENGTHCOEFFDEFAULT = 1.2d
+  val GRAPHWALKTERMINATIONPOLICYDEFAULT = "maxpathlength"
+  val GRAPHWALKTERMINATIONPOLICY = "graphWalkTerminationPolicy"
 
   val globalConfig: Config = scala.util.Try(config.getConfig(CONFIGENTRYNAME)) match {
     case scala.util.Success(cfg) => cfg

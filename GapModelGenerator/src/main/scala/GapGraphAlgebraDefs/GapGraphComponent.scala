@@ -27,3 +27,6 @@ case class GuiObject(id: Int, children: Int, props: Int, currentDepth: Int = 1, 
 
 case class Action(actionType: Int, fromId: Int, toId: Int, resultingValue: Option[Int], cost: Double) extends GapGraphComponent:
   def modify: Action = Action(SupplierOfRandomness.onDemand(maxv = GapModelAlgebra.actionRange), fromId, toId, resultingValue, SupplierOfRandomness.randProbs(1).head)
+
+case object TerminalNode extends GapGraphComponent
+case object TerminalAction extends GapGraphComponent

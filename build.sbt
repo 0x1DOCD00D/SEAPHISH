@@ -10,6 +10,8 @@ val typeSafeConfigVersion = "1.4.2"
 val logbackVersion = "1.2.10"
 val sfl4sVersion = "2.0.0-alpha5"
 val graphVizVersion = "0.18.1"
+val netBuddyVersion = "1.14.4"
+val catsVersion = "2.9.0"
 cinnamonLogLevel := "INFO"
 
 lazy val commonDependencies = Seq(
@@ -17,7 +19,7 @@ lazy val commonDependencies = Seq(
   "org.scalatestplus" %% "mockito-4-2" % "3.2.12.0-RC2" % Test,
   "com.typesafe" % "config" % typeSafeConfigVersion,
   "ch.qos.logback" % "logback-classic" % logbackVersion,
-  "net.bytebuddy" % "byte-buddy" % "1.14.4"
+  "net.bytebuddy" % "byte-buddy" % netBuddyVersion
 )
 
 lazy val root = (project in file("."))
@@ -34,7 +36,8 @@ lazy val GapModelGenerator = (project in file("GapModelGenerator"))
     libraryDependencies ++= commonDependencies ++ Seq(
       //      guava for graphs and tables
       "com.google.guava" % "guava" % guavaVersion,
-      "guru.nidi" % "graphviz-java" % graphVizVersion
+      "guru.nidi" % "graphviz-java" % graphVizVersion,
+      "org.typelevel" %% "cats-core" % catsVersion
     )
   ).dependsOn(Model, GenericSimUtilities)
 

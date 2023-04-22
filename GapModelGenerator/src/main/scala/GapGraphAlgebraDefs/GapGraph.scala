@@ -1,5 +1,6 @@
 package GapGraphAlgebraDefs
 
+import Randomizer.SupplierOfRandomness
 import Utilz.CreateLogger
 import com.google.common.graph.*
 import org.slf4j.Logger
@@ -35,6 +36,14 @@ case class GapGraph(sm: GuiStateMachine, initState: GuiObject):
       sb.toString
 
   def maxOutDegree(): Int = sm.nodes().asScala.map(node => sm.outDegree(node)).max
+
+  def getRandomConnectedNode(from: GuiObject): Option[(GuiObject, Action)] =
+    val successors: Array[GuiObject] = sm.successors(from).asScala.toArray
+    if successors.isEmpty then None
+    else
+      val randomSuccessor: GuiObject = successors(SupplierOfRandomness.onDemand(minv = 1, maxv = successors.length))
+      val edge: Action = sm.edgeValue(from, randomSuccessor).get
+      Some((randomSuccessor, edge))
 
   def unreachableNodes(): (Set[GuiObject], Int) =
     def dfs(nodes: List[GuiObject], visited: Set[GuiObject]): (Set[GuiObject], Int) =
