@@ -13,7 +13,7 @@ import GapGraphAlgebraDefs.{Action, GapGraph, GapGraphComponent, GuiObject, GuiS
 import cats.Monad
 import cats.data.State
 import cats.syntax.all.catsSyntaxMonad
-
+import Utilz.CreateLogger
 import scala.collection.immutable.Nil
 
 trait TerminationPolicy
@@ -25,6 +25,7 @@ type STEPRESULT = Tuple2[GapGraphComponent, GapGraphComponent]
 type PATHRESULT = List[STEPRESULT]
 type GRAPHSTATE = GuiObject
 type WALKSTATE = State[GRAPHSTATE, PATHRESULT]
+val logger = CreateLogger(classOf[RandomWalker])
 class RandomWalker(private val gg: GapGraph, private val condition: TerminationPolicy) {
   require(gg != null, "GapGraph cannot be null")
   val maxWalkPathLength:Int = scala.math.floor(maxWalkPathLengthCoeff * gg.sm.nodes().size).toInt
@@ -42,29 +43,20 @@ class RandomWalker(private val gg: GapGraph, private val condition: TerminationP
   }
 
 //  this function checks for termination conditions of the random walk
-  def check4Termination(currValue:PATHRESULT): Option[PATHRESULT] =
+  private def check4Termination(currValue:PATHRESULT): Option[PATHRESULT] =
+    def check4Cycle: Boolean =
+      currValue.groupBy(x => x._1).filter(x => x._2.size > 1).keys.toList match
+        case Nil => false
+        case _ => true
+    end check4Cycle
+
     condition match
-      case UntilCycleIsFound =>
-        if currValue.isEmpty then None
-        else
-          val lastNode = currValue.head._1
-          val lastAction = currValue.head._2
-          val pathWithoutLastNode = currValue.tail
-          if pathWithoutLastNode.exists(x => x._1 == lastNode && x._2 == lastAction) then Some(currValue)
-          else None
+      case UntilCycleIsFound => if check4Cycle then Some(currValue) else None
       case MaxPathLengthIsReached =>
-        if currValue.size > 10 then Some(currValue)
-        else None
-      case AllTerminationConditions =>
-        if currValue.isEmpty then None
-        else
-          val lastNode = currValue.head._1
-          val lastAction = currValue.head._2
-          val pathWithoutLastNode = currValue.tail
-          if pathWithoutLastNode.exists(x => x._1 == lastNode && x._2 == lastAction) then Some(currValue)
-          else if currValue.size > 10 then Some(currValue)
-          else None
-    Some(currValue)
+        if currValue.size > maxWalkPathLength then Some(currValue) else None
+      case AllTerminationConditions => if check4Cycle || currValue.size > maxWalkPathLength then Some(currValue) else None
+  end check4Termination
+
 
 //  this is the main driver of the random walk
   def WalkTheWalk(currState: WALKSTATE): WALKSTATE =
@@ -74,13 +66,25 @@ class RandomWalker(private val gg: GapGraph, private val condition: TerminationP
     }
 }
 object RandomWalker:
-  def apply(gg: GapGraph): PATHRESULT =
+  def apply(gg: GapGraph, howManyWalks:Int): PATHRESULT =
+    require(gg != null, "GapGraph cannot be null")
+    require(howManyWalks > 0, "Number of walks must be positive")
     val terminationPolicy:TerminationPolicy = graphWalkTerminationPolicy.trim.toLowerCase match
       case UNTILCYCLETC => UntilCycleIsFound
       case MAXPATHLENGTHTC => MaxPathLengthIsReached
       case ALLTC => AllTerminationConditions
     val rw = new RandomWalker(gg, terminationPolicy)
-    val walkedPath = rw.WalkTheWalk(rw.makeOneStep(List.empty)).run(gg.initState).value
-    walkedPath(1)
+    (1 to howManyWalks).map(_ => rw.WalkTheWalk(rw.makeOneStep(List.empty)).run(gg.initState).value(1)).flatten.toList
+
   @main def runRandomWalker(args: String*): Unit =
-    println("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/GapModelGenerator/src/main/scala/GapModelAnalyzer/RandomWalker.scala created at time 12:46 PM")
+    logger.info("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/GapModelGenerator/src/main/scala/GapModelAnalyzer/RandomWalker.scala created at time 12:46 PM")
+
+    val node1: GuiObject = GuiObject(id = 1, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
+    val node2: GuiObject = GuiObject(id = 2, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
+    val node3: GuiObject = GuiObject(id = 3, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
+    val edge12: Action = Action(actionType = 1, fromId = 1, toId = 2, resultingValue = Some(12), cost = 0.12)
+    val edge23: Action = Action(actionType = 2, fromId = 2, toId = 3, resultingValue = Some(23), cost = 0.23)
+    val lst = List((node1, edge12), (node2, edge23), (node3, TerminalAction), (TerminalNode, TerminalAction), (node2, edge23), (node1, edge23))
+    logger.info(s"List of entries with cycles: ${lst.mkString(", ")}")
+    val cycles = lst.groupBy(x => x._1).filter(x => x._2.size > 1).keys.toList
+    logger.info(s"List of cycles: ${cycles.mkString(", ")}")
