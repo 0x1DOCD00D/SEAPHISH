@@ -64,17 +64,19 @@ class RandomWalker(private val gg: GapGraph, private val condition: TerminationP
       if step.isDefined then WalkTheWalk(makeOneStep(step.get))
       else currState
     }
-}
-object RandomWalker:
-  def apply(gg: GapGraph, howManyWalks:Int): PATHRESULT =
-    require(gg != null, "GapGraph cannot be null")
+  def walk(howManyWalks:Int = 1): PATHRESULT =
     require(howManyWalks > 0, "Number of walks must be positive")
+    (1 to howManyWalks).map(_ => WalkTheWalk(makeOneStep(List.empty)).run(gg.initState).value(1)).flatten.toList
+}
+
+object RandomWalker:
+  def apply(gg: GapGraph): RandomWalker =
+    require(gg != null, "GapGraph cannot be null")
     val terminationPolicy:TerminationPolicy = graphWalkTerminationPolicy.trim.toLowerCase match
       case UNTILCYCLETC => UntilCycleIsFound
       case MAXPATHLENGTHTC => MaxPathLengthIsReached
       case ALLTC => AllTerminationConditions
-    val rw = new RandomWalker(gg, terminationPolicy)
-    (1 to howManyWalks).map(_ => rw.WalkTheWalk(rw.makeOneStep(List.empty)).run(gg.initState).value(1)).flatten.toList
+    new RandomWalker(gg, terminationPolicy)
 
   @main def runRandomWalker(args: String*): Unit =
     logger.info("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/GapModelGenerator/src/main/scala/GapModelAnalyzer/RandomWalker.scala created at time 12:46 PM")
