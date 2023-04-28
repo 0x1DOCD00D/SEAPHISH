@@ -29,7 +29,7 @@ val logger = CreateLogger(classOf[RandomWalker])
 class RandomWalker(private val gg: GapGraph, private val condition: TerminationPolicy) {
   require(gg != null, "GapGraph cannot be null")
   val maxWalkPathLength:Int = scala.math.floor(maxWalkPathLengthCoeff * gg.sm.nodes().size).toInt
-  logger.info(s"Max walk path length: $maxWalkPathLength")
+  logger.info(s"Max walk path length: $maxWalkPathLength and the termination condition is $condition")
 
   private def step(node: GRAPHSTATE): Option[STEPRESULT] =
     require(node != null, "Gap object cannot be null")
@@ -51,19 +51,17 @@ class RandomWalker(private val gg: GapGraph, private val condition: TerminationP
 
 //  this function checks for termination conditions of the random walk
   private def check4Termination(currValue:PATHRESULT): PATHRESULT =
-    def check4Cycle: Boolean =
-      currValue.groupBy(x => x._1).filter(x => x._2.size > 1).keys.toList match
-        case Nil => false
-        case _ => true
+    def check4Cycle: PATHRESULT =
+      if currValue.groupBy(x => x._1).filter(x => x._2.size > 1).keys.toList.nonEmpty then (TerminalNode, TerminalAction)::currValue.tail else currValue
     end check4Cycle
 
     if currValue.nonEmpty && currValue.headOption.get._1 == TerminalNode then currValue
     else
       condition match
-        case UntilCycleIsFound => if check4Cycle then (TerminalNode, TerminalAction)::currValue else currValue
+        case UntilCycleIsFound => check4Cycle
         case MaxPathLengthIsReached =>
           if currValue.size <= maxWalkPathLength then currValue else (TerminalNode, TerminalAction)::currValue
-        case AllTerminationConditions => if check4Cycle || currValue.size > maxWalkPathLength then (TerminalNode, TerminalAction)::currValue else currValue
+        case AllTerminationConditions => if currValue.size > maxWalkPathLength then (TerminalNode, TerminalAction)::currValue else check4Cycle
   end check4Termination
 
 
@@ -88,12 +86,20 @@ class RandomWalker(private val gg: GapGraph, private val condition: TerminationP
 }
 
 object RandomWalker:
-  def apply(gg: GapGraph): RandomWalker =
+  /*
+    val MAXPATHLENGTHTC:String = "maxpathlength"
+    val UNTILCYCLETC:String = "untilcycle"
+    val ALLTC:String = "all"
+  * */
+  def apply(gg: GapGraph, schwarz: Option[String] = None): RandomWalker =
     require(gg != null, "GapGraph cannot be null")
-    val terminationPolicy:TerminationPolicy = graphWalkTerminationPolicy.trim.toLowerCase match
+    val partialFunction4TerminationPolicy: PartialFunction[String, TerminationPolicy] = {
       case UNTILCYCLETC => UntilCycleIsFound
       case MAXPATHLENGTHTC => MaxPathLengthIsReached
       case ALLTC => AllTerminationConditions
+    }
+    val terminationPolicy:TerminationPolicy = if schwarz.isDefined then partialFunction4TerminationPolicy(schwarz.get.trim.toLowerCase)
+    else partialFunction4TerminationPolicy(graphWalkTerminationPolicy.trim.toLowerCase)
     logger.info(s"Termination policy: ${terminationPolicy.toString}")
     new RandomWalker(gg, terminationPolicy)
 

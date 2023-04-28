@@ -8,7 +8,7 @@
 
 package GapModelAnalyzer
 
-import GapGraphAlgebraDefs.{Action, GapGraph, GuiObject, TerminalNode}
+import GapGraphAlgebraDefs.{Action, GapGraph, GapGraphComponent, GuiObject, TerminalNode}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
@@ -81,12 +81,12 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     def addnode(node: GuiObject): Unit = {
       if !graph.addNode(node) then
         logger.error(s"Node $node already exists")
-      else logger.info(s"Added node $node")
+      else logger.debug(s"Added node $node")
     }
 
     def addedge(from: GuiObject, to: GuiObject, edge: Action): Unit = {
       Try(graph.putEdgeValue(from, to, edge)) match
-      case Success(_) => logger.info(s"Added edge $edge between nodes $from -> $to")
+      case Success(_) => logger.debug(s"Added edge $edge between nodes $from -> $to")
       case Failure(e) => logger.error(s"Edge $from -> $to cannot be added because $e")
     }
 
@@ -137,7 +137,7 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
 //    walks.foreach(walk => logger.info(s"Walk: ${graph.initState :: walk}"))
     val walkNodeNumbers: List[List[Int]] = walks.map(walk => walk.map {
       case node: STEPRESULT => node._1.asInstanceOf[GuiObject].id
-      case _ => assert(false); -1
+      case null => assert(false); -1
     }
     )
     walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
@@ -155,10 +155,10 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     //    walks.foreach(walk => logger.info(s"Walk: ${graph.initState :: walk}"))
     val walkNodeNumbers: List[List[Int]] = walks.map(walk => walk.map {
       case node: STEPRESULT => node._1.asInstanceOf[GuiObject].id
-      case _ => assert(false); -1
+      case null => assert(false); -1
     }
     )
-    walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
+//    walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
     walkNodeNumbers.length shouldBe 50
 
     val noCyclesWalks = walkNodeNumbers.filter(!test4Cycles(_))
@@ -167,4 +167,43 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     pathLengths.filter(_ > 6) shouldBe Nil
   }
 
+  it should "avoid cycles in fifty random walks" in {
+    val graph = createTestGraph()
+    val walker = RandomWalker(graph, Some("untilcycle"))
+    val walks = walker.walk(50)
+    //    walks.foreach(walk => logger.info(s"Walk: ${graph.initState :: walk}"))
+    val walkNodeNumbers: List[List[Int]] = walks.map(walk => walk.map {
+      case node: STEPRESULT => node._1.asInstanceOf[GuiObject].id
+      case null => assert(false); -1
+    }
+    )
+    //walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
+    walkNodeNumbers.length shouldBe 50
+
+    val cycles = walkNodeNumbers.filter(walk => test4Cycles(walk))
+    cycles.foreach(walk => logger.info(s"Walk with cycles: ${graph.initState.id :: walk}"))
+    cycles.length shouldBe 0
+  }
+
+  it should "avoid cycles and max path length overrun in one thousand random walks" in {
+    val graph = createTestGraph()
+    val walker = RandomWalker(graph, Some("all"))
+    val walks = walker.walk(1000)
+    //    walks.foreach(walk => logger.info(s"Walk: ${graph.initState :: walk}"))
+    val walkNodeNumbers: List[List[Int]] = walks.map(walk => walk.map {
+      case node: STEPRESULT => node._1.asInstanceOf[GuiObject].id
+      case null => assert(false); -1
+    }
+    )
+    //walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
+    walkNodeNumbers.length shouldBe 1000
+
+    val cycles = walkNodeNumbers.filter(walk => test4Cycles(walk))
+    cycles.foreach(walk => logger.info(s"Walk with cycles: ${graph.initState.id :: walk}"))
+    cycles.length shouldBe 0
+
+    val pathLengths: List[Int] = walkNodeNumbers.map(_.length)
+    pathLengths.filter(_ > walker.maxWalkPathLength+1) shouldBe Nil
+
+  }
 }
