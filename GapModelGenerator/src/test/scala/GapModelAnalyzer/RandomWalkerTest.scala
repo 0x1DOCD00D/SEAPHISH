@@ -118,6 +118,11 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     GapGraph(graph, node1)
   }
 
+  def test4Cycles(lst: List[Int]): Boolean =
+    lst match
+    case Nil => false
+    case x :: xs => xs.contains(x) | test4Cycles(xs)
+
   behavior of "the random walk on the gap graph"
 
   it should "create a graph for random walks" in {
@@ -138,9 +143,28 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
     walkNodeNumbers.length shouldBe 5
 
+    walkNodeNumbers.foreach(walk => if test4Cycles(walk) then logger.info(s"Cycles found in the walk: $walk"))
     val pathLengths: List[Int] = walkNodeNumbers.map(_.length)
     pathLengths.filter(_ > walker.maxWalkPathLength+1) shouldBe Nil
   }
 
+  it should "find cycles in fifty random walks" in {
+    val graph = createTestGraph()
+    val walker = RandomWalker(graph)
+    val walks = walker.walk(50)
+    //    walks.foreach(walk => logger.info(s"Walk: ${graph.initState :: walk}"))
+    val walkNodeNumbers: List[List[Int]] = walks.map(walk => walk.map {
+      case node: STEPRESULT => node._1.asInstanceOf[GuiObject].id
+      case _ => assert(false); -1
+    }
+    )
+    walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
+    walkNodeNumbers.length shouldBe 50
+
+    val noCyclesWalks = walkNodeNumbers.filter(!test4Cycles(_))
+//    logger.info(s"Walks without cycles: $noCyclesWalks")
+    val pathLengths: List[Int] = noCyclesWalks.map(_.length)
+    pathLengths.filter(_ > 6) shouldBe Nil
+  }
 
 }
