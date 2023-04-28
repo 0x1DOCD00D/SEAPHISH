@@ -136,6 +136,8 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     }
     )
     walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
+    walkNodeNumbers.length shouldBe 5
+
     val pathLengths: List[Int] = walkNodeNumbers.map(_.length)
     pathLengths.filter(_ > walker.maxWalkPathLength+1) shouldBe Nil
   }
