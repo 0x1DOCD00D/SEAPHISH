@@ -29,44 +29,62 @@ val logger = CreateLogger(classOf[RandomWalker])
 class RandomWalker(private val gg: GapGraph, private val condition: TerminationPolicy) {
   require(gg != null, "GapGraph cannot be null")
   val maxWalkPathLength:Int = scala.math.floor(maxWalkPathLengthCoeff * gg.sm.nodes().size).toInt
+  logger.info(s"Max walk path length: $maxWalkPathLength")
+
   private def step(node: GRAPHSTATE): Option[STEPRESULT] =
     require(node != null, "Gap object cannot be null")
     gg.getRandomConnectedNode(node)
 
+  private def initialState: WALKSTATE = State { state =>
+    (state, List[STEPRESULT]())
+  }
 //  this function makes one step of the random walk where the state is the current node and the path is the list of steps
-  private def makeOneStep(path: PATHRESULT): WALKSTATE = State { state =>
-    step(state) match {
-      case Some((node:GuiObject, action:Action)) => (node, (node, action) :: path)
+  private def makeOneStep(path: PATHRESULT, i: Int): WALKSTATE = State { state =>
+    if path.nonEmpty && path.headOption.get._1 == TerminalNode then (state, path)
+    else step(state) match {
+      case Some((node:GuiObject, action:Action)) =>
+        (node, (node, action) :: path)
       case None => (state, (TerminalNode, TerminalAction)::path)
       case _ => (state, (TerminalNode, TerminalAction)::path)
     }
   }
 
 //  this function checks for termination conditions of the random walk
-  private def check4Termination(currValue:PATHRESULT): Option[PATHRESULT] =
+  private def check4Termination(currValue:PATHRESULT): PATHRESULT =
     def check4Cycle: Boolean =
       currValue.groupBy(x => x._1).filter(x => x._2.size > 1).keys.toList match
         case Nil => false
         case _ => true
     end check4Cycle
 
-    condition match
-      case UntilCycleIsFound => if check4Cycle then Some(currValue) else None
-      case MaxPathLengthIsReached =>
-        if currValue.size > maxWalkPathLength then Some(currValue) else None
-      case AllTerminationConditions => if check4Cycle || currValue.size > maxWalkPathLength then Some(currValue) else None
+    if currValue.nonEmpty && currValue.headOption.get._1 == TerminalNode then currValue
+    else
+      condition match
+        case UntilCycleIsFound => if check4Cycle then (TerminalNode, TerminalAction)::currValue else currValue
+        case MaxPathLengthIsReached =>
+          if currValue.size <= maxWalkPathLength then currValue else (TerminalNode, TerminalAction)::currValue
+        case AllTerminationConditions => if check4Cycle || currValue.size > maxWalkPathLength then (TerminalNode, TerminalAction)::currValue else currValue
   end check4Termination
 
 
 //  this is the main driver of the random walk
-  def WalkTheWalk(currState: WALKSTATE): WALKSTATE =
+  def WalkTheWalk(currState: WALKSTATE, i:Int): WALKSTATE =
     currState map check4Termination flatMap { step =>
-      if step.isDefined then WalkTheWalk(makeOneStep(step.get))
-      else currState
+      if step.isEmpty || (step.nonEmpty && step.headOption.get._1 != TerminalNode) then
+        WalkTheWalk(makeOneStep(step, i), i+1)
+      else
+        State.pure[GRAPHSTATE, PATHRESULT](step)
     }
-  def walk(howManyWalks:Int = 1): PATHRESULT =
+  end WalkTheWalk
+
+  def walk(howManyWalks:Int = 1): List[PATHRESULT] =
     require(howManyWalks > 0, "Number of walks must be positive")
-    (1 to howManyWalks).map(_ => WalkTheWalk(makeOneStep(List.empty)).run(gg.initState).value(1)).flatten.toList
+    def trimPath(walkOne:PATHRESULT): PATHRESULT =
+      if walkOne.nonEmpty && walkOne.head._1 == TerminalNode then walkOne.tail.reverse else walkOne.reverse
+    end trimPath
+
+    val result: List[PATHRESULT] = (1 to howManyWalks).map(_ => WalkTheWalk(initialState,0).run(gg.initState).value(1)).toList
+    result.map(trimPath)
 }
 
 object RandomWalker:
@@ -76,6 +94,7 @@ object RandomWalker:
       case UNTILCYCLETC => UntilCycleIsFound
       case MAXPATHLENGTHTC => MaxPathLengthIsReached
       case ALLTC => AllTerminationConditions
+    logger.info(s"Termination policy: ${terminationPolicy.toString}")
     new RandomWalker(gg, terminationPolicy)
 
   @main def runRandomWalker(args: String*): Unit =

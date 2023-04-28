@@ -8,7 +8,7 @@
 
 package GapModelAnalyzer
 
-import GapGraphAlgebraDefs.{Action, GapGraph, GuiObject}
+import GapGraphAlgebraDefs.{Action, GapGraph, GuiObject, TerminalNode}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
@@ -81,6 +81,7 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     def addnode(node: GuiObject): Unit = {
       if !graph.addNode(node) then
         logger.error(s"Node $node already exists")
+      else logger.info(s"Added node $node")
     }
 
     def addedge(from: GuiObject, to: GuiObject, edge: Action): Unit = {
@@ -116,5 +117,28 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     addedge(node8, node9, edge89)
     GapGraph(graph, node1)
   }
+
+  behavior of "the random walk on the gap graph"
+
+  it should "create a graph for random walks" in {
+    val graph = createTestGraph()
+    graph shouldBe a[GapGraph]
+  }
+
+  it should "perform a single random walk" in {
+    val graph = createTestGraph()
+    val walker = RandomWalker(graph)
+    val walks = walker.walk(5)
+//    walks.foreach(walk => logger.info(s"Walk: ${graph.initState :: walk}"))
+    val walkNodeNumbers: List[List[Int]] = walks.map(walk => walk.map {
+      case node: STEPRESULT => node._1.asInstanceOf[GuiObject].id
+      case _ => assert(false); -1
+    }
+    )
+    walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
+    val pathLengths: List[Int] = walkNodeNumbers.map(_.length)
+    pathLengths.filter(_ > walker.maxWalkPathLength+1) shouldBe Nil
+  }
+
 
 }

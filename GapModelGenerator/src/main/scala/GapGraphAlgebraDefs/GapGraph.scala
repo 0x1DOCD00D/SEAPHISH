@@ -41,7 +41,7 @@ case class GapGraph(sm: GuiStateMachine, initState: GuiObject):
     val successors: Array[GuiObject] = sm.successors(from).asScala.toArray
     if successors.isEmpty then None
     else
-      val randomSuccessor: GuiObject = successors(SupplierOfRandomness.onDemand(minv = 1, maxv = successors.length))
+      val randomSuccessor: GuiObject = successors(SupplierOfRandomness.onDemand(maxv = successors.length))
       val edge: Action = sm.edgeValue(from, randomSuccessor).get
       Some((randomSuccessor, edge))
 
