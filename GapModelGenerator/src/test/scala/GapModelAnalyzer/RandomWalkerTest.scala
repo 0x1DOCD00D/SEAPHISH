@@ -125,7 +125,7 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     graph shouldBe a[GapGraph]
   }
 
-  it should "perform a single random walk" in {
+  it should "perform five random walks" in {
     val graph = createTestGraph()
     val walker = RandomWalker(graph)
     val walks = walker.walk(5)
