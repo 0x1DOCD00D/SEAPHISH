@@ -8,12 +8,14 @@
 
 package GapModelAnalyzer
 
-import GapGraphAlgebraDefs.GapModelAlgebra.{ALLTC, MAXPATHLENGTHTC, UNTILCYCLETC, graphWalkTerminationPolicy, maxWalkPathLengthCoeff}
+import GapGraphAlgebraDefs.GapModelAlgebra.{ALLTC, MAXPATHLENGTHTC, UNTILCYCLETC, graphWalkNodeTerminationProbability, graphWalkTerminationPolicy, maxWalkPathLengthCoeff}
 import GapGraphAlgebraDefs.{Action, GapGraph, GapGraphComponent, GuiObject, GuiStateMachine, TerminalAction, TerminalNode}
+import Randomizer.SupplierOfRandomness
 import cats.Monad
 import cats.data.State
 import cats.syntax.all.catsSyntaxMonad
 import Utilz.CreateLogger
+
 import scala.collection.immutable.Nil
 
 trait TerminationPolicy
@@ -39,8 +41,9 @@ class RandomWalker(private val gg: GapGraph, private val condition: TerminationP
     (state, List[STEPRESULT]())
   }
 //  this function makes one step of the random walk where the state is the current node and the path is the list of steps
-  private def makeOneStep(path: PATHRESULT, i: Int): WALKSTATE = State { state =>
-    if path.nonEmpty && path.headOption.get._1 == TerminalNode then (state, path)
+  private def makeOneStep(path: PATHRESULT): WALKSTATE = State { state =>
+    if path.nonEmpty && SupplierOfRandomness.`YesOrNo?`(graphWalkNodeTerminationProbability) then (state, (TerminalNode, TerminalAction)::path)
+    else if path.nonEmpty && path.headOption.get._1 == TerminalNode then (state, path)
     else step(state) match {
       case Some((node:GuiObject, action:Action)) =>
         (node, (node, action) :: path)
@@ -66,10 +69,10 @@ class RandomWalker(private val gg: GapGraph, private val condition: TerminationP
 
 
 //  this is the main driver of the random walk
-  def WalkTheWalk(currState: WALKSTATE, i:Int): WALKSTATE =
+  def WalkTheWalk(currState: WALKSTATE): WALKSTATE =
     currState map check4Termination flatMap { step =>
       if step.isEmpty || (step.nonEmpty && step.headOption.get._1 != TerminalNode) then
-        WalkTheWalk(makeOneStep(step, i), i+1)
+        WalkTheWalk(makeOneStep(step))
       else
         State.pure[GRAPHSTATE, PATHRESULT](step)
     }
@@ -81,7 +84,7 @@ class RandomWalker(private val gg: GapGraph, private val condition: TerminationP
       if walkOne.nonEmpty && walkOne.head._1 == TerminalNode then walkOne.tail.reverse else walkOne.reverse
     end trimPath
 
-    val result: List[PATHRESULT] = (1 to howManyWalks).map(_ => WalkTheWalk(initialState,0).run(gg.initState).value(1)).toList
+    val result: List[PATHRESULT] = (1 to howManyWalks).map(_ => WalkTheWalk(initialState).run(gg.initState).value(1)).toList
     result.map(trimPath)
 }
 

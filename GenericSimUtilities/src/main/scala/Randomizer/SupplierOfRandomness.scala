@@ -1,8 +1,9 @@
 package Randomizer
 
-import Utilz.SPSConstants
+import Utilz.{CreateLogger, SPSConstants}
 import Utilz.SPSConstants.SEED
 import com.typesafe.config.ConfigFactory
+import org.slf4j.Logger
 
 import scala.util.Try
 
@@ -16,6 +17,7 @@ trait MutableBookeeping4Efficiency:
 
 
 object SupplierOfRandomness extends MutableBookeeping4Efficiency:
+  val logger: Logger = CreateLogger(this.getClass)
   def `YesOrNo?`(thresholdProb: Double = 0.5d): Boolean =
     require(thresholdProb >= 0.0d && thresholdProb <= 1.0d, s"thresholdProb must be between 0.0 and 1.0, but was $thresholdProb")
     randProbs(1).head < thresholdProb
@@ -44,7 +46,7 @@ object SupplierOfRandomness extends MutableBookeeping4Efficiency:
         case (gen, offset, lst) => currGenDbl = gen; currOffsetDbl = offset; lst.asInstanceOf[List[Double]]
       }
     else UniformProbGenerator(currGenInt, offset = currOffsetInt, szOfValues = howManyNumbers) match {
-      case (gen, offset, lst) => currGenInt = gen; currOffsetInt += offset; lst.asInstanceOf[List[Double]]
+      case (gen, offset, lst) => currGenInt = gen; currOffsetInt = offset; lst.asInstanceOf[List[Double]]
     }
 
   private val seed: Option[Long] = Try(SPSConstants.globalConfig.getLong(SEED)) match {

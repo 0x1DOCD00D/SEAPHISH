@@ -39,6 +39,8 @@ object SPSConstants:
   val MAXWALKPATHLENGTHCOEFFDEFAULT = 1.2d
   val GRAPHWALKTERMINATIONPOLICYDEFAULT = "maxpathlength"
   val GRAPHWALKTERMINATIONPOLICY = "graphWalkTerminationPolicy"
+  val GRAPHWALKNODETERMINATIONPROBABILITY = "graphWalkNodeTerminationProbability"
+  val GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT = 0.05d
 
   val globalConfig: Config = scala.util.Try(config.getConfig(CONFIGENTRYNAME)) match {
     case scala.util.Success(cfg) => cfg

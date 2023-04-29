@@ -152,13 +152,13 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     val graph = createTestGraph()
     val walker = RandomWalker(graph)
     val walks = walker.walk(50)
-    //    walks.foreach(walk => logger.info(s"Walk: ${graph.initState :: walk}"))
+//    walks.foreach(walk => logger.info(s"Walk: ${graph.initState :: walk}"))
     val walkNodeNumbers: List[List[Int]] = walks.map(walk => walk.map {
       case node: STEPRESULT => node._1.asInstanceOf[GuiObject].id
       case null => assert(false); -1
     }
     )
-//    walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
+    walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
     walkNodeNumbers.length shouldBe 50
 
     val noCyclesWalks = walkNodeNumbers.filter(!test4Cycles(_))
@@ -171,13 +171,13 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     val graph = createTestGraph()
     val walker = RandomWalker(graph, Some("untilcycle"))
     val walks = walker.walk(50)
-    //    walks.foreach(walk => logger.info(s"Walk: ${graph.initState :: walk}"))
+//    walks.foreach(walk => logger.info(s"Walk: ${graph.initState :: walk}"))
     val walkNodeNumbers: List[List[Int]] = walks.map(walk => walk.map {
       case node: STEPRESULT => node._1.asInstanceOf[GuiObject].id
       case null => assert(false); -1
     }
     )
-    //walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
+    walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
     walkNodeNumbers.length shouldBe 50
 
     val cycles = walkNodeNumbers.filter(walk => test4Cycles(walk))
@@ -195,7 +195,7 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
       case null => assert(false); -1
     }
     )
-    //walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
+//    walkNodeNumbers.foreach(walk => logger.info(s"Walk: ${graph.initState.id :: walk}"))
     walkNodeNumbers.length shouldBe 1000
 
     val cycles = walkNodeNumbers.filter(walk => test4Cycles(walk))
