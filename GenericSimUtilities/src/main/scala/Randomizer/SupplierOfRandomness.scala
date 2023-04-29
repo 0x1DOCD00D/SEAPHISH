@@ -16,9 +16,11 @@ trait MutableBookeeping4Efficiency:
 
 
 object SupplierOfRandomness extends MutableBookeeping4Efficiency:
-  def `YesOrNo?`: Boolean = onDemand(0,1) == 1
+  def `YesOrNo?`(thresholdProb: Double = 0.5d): Boolean =
+    require(thresholdProb >= 0.0d && thresholdProb <= 1.0d, s"thresholdProb must be between 0.0 and 1.0, but was $thresholdProb")
+    randProbs(1).head < thresholdProb
   def onDemand(minv:Int = 0, maxv:Int = Int.MaxValue): Int =
-    if !initInts then
+    if !initInts || currGenInt == null then
       initInts = true
       UniformProbGenerator(UniformProbGenerator.createGenerator(seed), szOfValues = 0, ints = true) match {
         case (gen, offset, lstOfInts) => currGenInt = gen; currOffsetInt = offset; lstOfInts.asInstanceOf[List[Int]]

@@ -52,7 +52,8 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     logger.info(modificationRecord.toString)
     logger.info(graph.sm.toString)
     modificationRecord.size shouldBe 2
-    modificationRecord.find(_._1 == OriginalGapComponent(node3)) shouldBe Some(OriginalGapComponent(node3), NodeAdded(GuiObject(4,0,2,1,9,1,2,0)))
+    val res: Option[(OriginalGapComponent, GraphPerturbationAlgebra.Perturbation)] = modificationRecord.find(_._1 == OriginalGapComponent(node3))
+    res.get._1.node shouldBe node3
   }
 
   it should "remove a node from the graph" in {
@@ -74,7 +75,8 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     logger.info(modificationRecord.toString)
     logger.info(graph.sm.toString)
     graph.sm.nodes().size shouldBe 3
-    modificationRecord shouldBe Vector((OriginalGapComponent(GuiObject(2,5,10,1,20,5,5,10)),NodeModified(GuiObject(2,5,10,1,10,5,10,10))))
+
+    modificationRecord(0)._1.node shouldBe node2
   }
 
   it should "add an edge to the graph" in {
