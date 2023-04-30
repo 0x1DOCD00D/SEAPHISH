@@ -12,4 +12,4 @@ import GapGraphAlgebraDefs.GapGraph
 import GapGraphAlgebraDefs.GraphPerturbationAlgebra.ModificationRecord
 
 object Analyzer:
-  def apply(og: GapGraph, pg: GapGraph, mr: ModificationRecord): WalkingStats = new WalkingStats
+  def apply(og: GapGraph, pg: GapGraph, mr: ModificationRecord): WalkingStats = ???

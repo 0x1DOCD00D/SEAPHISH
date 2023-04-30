@@ -242,5 +242,25 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     modificationRecord(0)._2.asInstanceOf[NodeRemoved].node shouldBe node8
   }
 
+  it should "compute stats for different numbers of random walks" in {
+    val graph = createTestGraph()
+    val walker = RandomWalker(graph)
+    val walks_1 = walker.walk()
+    val walks_5 = walker.walk(5)
+    val walks_10 = walker.walk(10)
+    val walks_30 = walker.walk(30)
+
+    walks_1.foreach(walk => logger.info(s"Walk 1: ${graph.initState.id :: walk}"))
+    val stats_1 = new WalkingStats(graph, walks_1)
+    logger.info(s"Stats for 1 walks: ${stats_1.graphCoverage()}")
+    logger.info(s"Stats for 1 walks: ${stats_1.coveragePercentages}")
+
+    walks_5.foreach(walk => logger.info(s"Walk 5: ${graph.initState.id :: walk}"))
+    val stats_5 = new WalkingStats(graph, walks_5)
+    logger.info(s"Stats for 5 walks: ${stats_5.graphCoverage()}")
+    logger.info(s"Stats for 5 walks: ${stats_5.coveragePercentages}")
+    stats_5.coveragePercentages(0) should be > stats_1.coveragePercentages(0)
+  }
+
 
 }
