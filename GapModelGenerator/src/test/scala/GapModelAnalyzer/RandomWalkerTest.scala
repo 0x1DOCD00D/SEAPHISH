@@ -8,7 +8,9 @@
 
 package GapModelAnalyzer
 
-import GapGraphAlgebraDefs.{Action, GapGraph, GapGraphComponent, GuiObject, TerminalNode}
+import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{EdgeRemoved, ModificationRecord, NodeModified, NodeRemoved, OriginalGapComponent}
+import GapGraphAlgebraDefs.GraphPerturbationAlgebraTest.{MODIFYNODEMETHOD, REMOVENODEMETHOD}
+import GapGraphAlgebraDefs.{Action, GapGraph, GapGraphComponent, GraphPerturbationAlgebra, GuiObject, TerminalNode}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
@@ -206,4 +208,39 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     pathLengths.filter(_ > walker.maxWalkPathLength+1) shouldBe Nil
 
   }
+
+  it should "create a perturbed graph" in {
+    val graph = createTestGraph()
+    val perturbedGraph = GraphPerturbationAlgebra(graph)
+    logger.info(s"Perturbed graph: ${perturbedGraph._2}")
+    perturbedGraph._1.sm.nodes().size() shouldBe graph.sm.nodes().size()
+    perturbedGraph._2.length should be >= 1
+  }
+
+  it should "create a perturbed graph with modified node 8" in {
+    val graph = createTestGraph()
+    val algebra = new GraphPerturbationAlgebra(graph)
+    val theFunc = PrivateMethod[ModificationRecord](Symbol(MODIFYNODEMETHOD))
+    val modificationRecord: ModificationRecord = algebra invokePrivate theFunc(node8)
+    graph.sm.nodes().size shouldBe 9
+
+    logger.info(modificationRecord(0)._2.toString)
+    modificationRecord(0)._1.node shouldBe node8
+    modificationRecord(0)._2.asInstanceOf[NodeModified].node should not equal node8
+  }
+
+  it should "create a perturbed graph with node 8 removed and all of its connected edges" in {
+    val graph = createTestGraph()
+    val algebra = new GraphPerturbationAlgebra(graph)
+    val theFunc = PrivateMethod[ModificationRecord](Symbol(REMOVENODEMETHOD))
+    val modificationRecord: ModificationRecord = algebra invokePrivate theFunc(node8)
+    logger.info(modificationRecord.toString)
+    logger.info(graph.sm.toString)
+    graph.sm.nodes().size shouldBe 8
+
+    logger.info(modificationRecord.toString())
+    modificationRecord(0)._2.asInstanceOf[NodeRemoved].node shouldBe node8
+  }
+
+
 }

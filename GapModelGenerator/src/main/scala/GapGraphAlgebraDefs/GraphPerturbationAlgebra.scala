@@ -39,12 +39,14 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
         logger.error(s"No nodes exist beyond the distance threshold of $minDistance2ApplyPerturbation")
         (newModel, Vector())
       else
-        val yesOrNo: Iterator[Boolean] = SupplierOfRandomness.randProbs(2 * nodesToApplyPerturbation.length).map(_ >= GapModelAlgebra.perturbationCoeff).iterator
+        val yesOrNo: Iterator[Boolean] = SupplierOfRandomness.randProbs(2 * nodesToApplyPerturbation.length).map(_ < GapModelAlgebra.perturbationCoeff).iterator
         (newModel, nodesToApplyPerturbation.toList.foldLeft(Vector[(OriginalGapComponent, Perturbation)]())((acc, node) => if yesOrNo.next() then perturbNode(node) ++ acc else acc))
     end if
 
   private def perturbNode(node: GuiObject): ModificationRecord =
-    ACTIONS.fromOrdinal(SupplierOfRandomness.onDemand(ACTIONS.values.map(_.ordinal).toList.max)) match
+    val op2do = ACTIONS.fromOrdinal(SupplierOfRandomness.onDemand(maxv = ACTIONS.values.map(_.ordinal).toList.max))
+    logger.info(s"Applying perturbation $op2do on node $node")
+    op2do match
       case ACTIONS.ADDNODE => addNode(node)
       case ACTIONS.MODIFYNODE => modifyNode(node)
       case ACTIONS.REMOVENODE => removeNode(node)
@@ -58,15 +60,15 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
     import scala.jdk.OptionConverters.*
     val allNodes: List[GuiObject] = newModel.sm.nodes().asScala.toList
     if allNodes.contains(node) then
-      val modificationRecord:ModificationRecord = newModel.sm.predecessors(node).asScala.toList.flatMap {pn =>
+      val modificationRecord:ModificationRecord = Vector((OriginalGapComponent(node), NodeRemoved(node))) ++ newModel.sm.predecessors(node).asScala.toList.flatMap {pn =>
         newModel.sm.edgeValue(pn, node).toScala match
           case Some(edge) =>
-            Vector((OriginalGapComponent(node), NodeRemoved(node)), (OriginalGapComponent(node), EdgeRemoved(edge)))
+            Vector((OriginalGapComponent(node), EdgeRemoved(edge)))
           case None => None
       }.toVector ++ newModel.sm.successors(node).asScala.toList.flatMap { sn =>
         newModel.sm.edgeValue(node, sn).toScala match
           case Some(edge) =>
-            Vector((OriginalGapComponent(node), NodeRemoved(node)), (OriginalGapComponent(node), EdgeRemoved(edge)))
+            Vector((OriginalGapComponent(node), EdgeRemoved(edge)))
           case None => None
       }.toVector
 
@@ -127,9 +129,9 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
         newModel.sm.hasEdgeConnecting(otherNode, node))
     if allNodes.contains(node) then
       action match
-        case ACTIONS.ADDEDGE => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[GuiObject], addEdge)
-        case ACTIONS.REMOVEEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[GuiObject], removeEdge)
-        case ACTIONS.MODIFYEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[GuiObject], modifyEdge)
+        case ACTIONS.ADDEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[GuiObject], addEdge)
+        case ACTIONS.REMOVEEDGE => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[GuiObject], removeEdge)
+        case ACTIONS.MODIFYEDGE => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[GuiObject], modifyEdge)
         case _ =>
           logger.error(s"Invalid action $action")
           Vector()

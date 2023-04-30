@@ -1,6 +1,7 @@
 package GapGraphAlgebraDefs
 
 import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{EdgeAdded, EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, NodeRemoved, OriginalGapComponent}
+import GapGraphAlgebraDefs.GraphPerturbationAlgebraTest.{ADDEDGEMETHOD, ADDNODEMETHOD, MODIFYEDGEMETHOD, MODIFYNODEMETHOD, REMOVEEDGEMETHOD, REMOVENODEMETHOD}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
@@ -13,15 +14,16 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
 
-class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with MockitoSugar with PrivateMethodTester {
-  val logger: Logger = CreateLogger(this.getClass)
-
+object GraphPerturbationAlgebraTest:
   val ADDNODEMETHOD = "addNode"
   val REMOVENODEMETHOD = "removeNode"
   val MODIFYNODEMETHOD = "modifyNode"
   val ADDEDGEMETHOD = "addEdge"
   val REMOVEEDGEMETHOD = "removeEdge"
   val MODIFYEDGEMETHOD = "modifyEdge"
+
+class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with MockitoSugar with PrivateMethodTester {
+  val logger: Logger = CreateLogger(this.getClass)
 
   val node1: GuiObject = GuiObject(id = 1, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
   val node2: GuiObject = GuiObject(id = 2, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
