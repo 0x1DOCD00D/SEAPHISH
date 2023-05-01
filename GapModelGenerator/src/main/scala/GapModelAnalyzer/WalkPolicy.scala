@@ -8,6 +8,7 @@
 
 package GapModelAnalyzer
 
-trait WalkPolicy {
+import scala.util.matching.Regex
 
-}
+trait WalkPolicy:
+  def constraintIgnore(regex: Regex): WalkPolicy

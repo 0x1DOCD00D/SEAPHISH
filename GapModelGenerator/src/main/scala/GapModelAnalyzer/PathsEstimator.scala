@@ -8,6 +8,15 @@
 
 package GapModelAnalyzer
 
-class PathsEstimator {
+import GapGraphAlgebraDefs.GapGraph
+
+/*
+* The purpose of this class is to determine the desired paths in the graph
+* that are not covered by the random walks.
+* */
+class PathsEstimator(private val graph: GapGraph, private val paths: LISTOFWALKEDPATHS) {
 
 }
+
+object PathsEstimator:
+  def apply(graph: GapGraph, paths: LISTOFWALKEDPATHS) = new PathsEstimator(graph, paths)

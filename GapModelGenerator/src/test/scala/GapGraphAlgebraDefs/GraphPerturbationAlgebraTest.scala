@@ -1,6 +1,6 @@
 package GapGraphAlgebraDefs
 
-import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{EdgeAdded, EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, NodeRemoved, OriginalGapComponent}
+import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{EdgeAdded, EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, NodeRemoved, OriginalGapComponent, inverseMR}
 import GapGraphAlgebraDefs.GraphPerturbationAlgebraTest.{ADDEDGEMETHOD, ADDNODEMETHOD, MODIFYEDGEMETHOD, MODIFYNODEMETHOD, REMOVEEDGEMETHOD, REMOVENODEMETHOD}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
@@ -54,8 +54,11 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     logger.info(modificationRecord.toString)
     logger.info(graph.sm.toString)
     modificationRecord.size shouldBe 2
+    val invMR = inverseMR(modificationRecord)
+    logger.info(s"Inverse MR: ${invMR.toString}")
     val res: Option[(OriginalGapComponent, GraphPerturbationAlgebra.Perturbation)] = modificationRecord.find(_._1 == OriginalGapComponent(node3))
     res.get._1.node shouldBe node3
+    invMR(node3).length shouldBe 2
   }
 
   it should "remove a node from the graph" in {
@@ -67,6 +70,9 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     logger.info(graph.sm.toString)
     graph.sm.nodes().size shouldBe 2
     modificationRecord shouldBe Vector((OriginalGapComponent(GuiObject(1,5,10,1,20,5,5,10)),NodeRemoved(GuiObject(1,5,10,1,20,5,5,10))), (OriginalGapComponent(GuiObject(1,5,10,1,20,5,5,10)),EdgeRemoved(Action(1,1,2,Some(12),0.12))))
+    val invMR = inverseMR(modificationRecord)
+    logger.info(s"Inverse MR: ${invMR.toString}")
+    invMR(node1).length shouldBe 2
   }
 
   it should "modify a node from the graph" in {
@@ -79,6 +85,10 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     graph.sm.nodes().size shouldBe 3
 
     modificationRecord(0)._1.node shouldBe node2
+
+    val invMR = inverseMR(modificationRecord)
+    logger.info(s"Inverse MR: ${invMR.toString}")
+    invMR(node2).length shouldBe 1
   }
 
   it should "add an edge to the graph" in {
@@ -93,6 +103,10 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     graph.sm.edges().size shouldBe 3
     graph.sm.hasEdgeConnecting(node3, node1) shouldBe true
     modificationRecord(0)._1.node shouldBe GuiObject(3,5,10,1,20,5,5,10)
+
+    val invMR = inverseMR(modificationRecord)
+    logger.info(s"Inverse MR: ${invMR.toString}")
+    invMR(node3).length shouldBe 1
   }
 
   it should "remove an edge from the graph" in {
@@ -107,6 +121,10 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     graph.sm.edges().size shouldBe 1
     graph.sm.hasEdgeConnecting(node2, node3) shouldBe false
     modificationRecord(0)._1.node shouldBe GuiObject(2, 5, 10, 1, 20, 5, 5, 10)
+
+    val invMR = inverseMR(modificationRecord)
+    logger.info(s"Inverse MR: ${invMR.toString}")
+    invMR(node2).length shouldBe 1
   }
 
   it should "modify an edge in the graph" in {
@@ -124,5 +142,9 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     val newEdge = graph.sm.edgeValue(node2, node3).get
     modificationRecord(0)._1.node shouldBe GuiObject(2, 5, 10, 1, 20, 5, 5, 10)
     oldEdge should not be newEdge
+
+    val invMR = inverseMR(modificationRecord)
+    logger.info(s"Inverse MR: ${invMR.toString}")
+    invMR(node2).length shouldBe 3
   }
 }

@@ -191,7 +191,7 @@ object GraphPerturbationAlgebra:
   case class OriginalGapComponent(node: GapGraphComponent)
 
   type ModificationRecord = Vector[(OriginalGapComponent, Perturbation)]
-
+  type ModificationRecordInverse = Map[GapGraphComponent, List[GapGraphComponent]]
 
   enum ACTIONS:
     case REMOVENODE, ADDNODE, MODIFYNODE, REMOVEEDGE, ADDEDGE, MODIFYEDGE
@@ -200,3 +200,18 @@ object GraphPerturbationAlgebra:
 
   def apply(originalModel: GapGraph): (GapGraph, ModificationRecord) =
     new GraphPerturbationAlgebra(originalModel).perturbModel
+
+  def inverseMR(mr: ModificationRecord): ModificationRecordInverse =
+    def gapComponentFromPerturbation(perturbation: Perturbation): GapGraphComponent = perturbation match
+      case NodeModified(node) => node
+      case NodeRemoved(node) => node
+      case NodeAdded(node) => node
+      case EdgeRemoved(edge) => edge
+      case EdgeAdded(edge) => edge
+      case EdgeModified(action) => action
+    end gapComponentFromPerturbation
+
+    mr.foldLeft(Map[GapGraphComponent, List[GapGraphComponent]]())(
+      (acc, elem) => acc +
+        (elem._1.node -> (gapComponentFromPerturbation(elem._2) :: acc.getOrElse(elem._1.node, List())))
+    )
