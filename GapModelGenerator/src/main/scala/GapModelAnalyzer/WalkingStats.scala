@@ -13,6 +13,10 @@ import GapGraphAlgebraDefs.{Action, GapGraph, GapGraphComponent, GuiObject}
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 import scala.util.Try
+import cats.instances.map._
+import cats.Monoid
+import cats.instances.int._
+import cats.syntax.semigroup._
 
 class WalkingStats(graph: GapGraph, paths: LISTOFWALKEDPATHS):
   private val graphNodes = graph.sm.nodes.asScala
@@ -23,22 +27,19 @@ class WalkingStats(graph: GapGraph, paths: LISTOFWALKEDPATHS):
     graphEdges.collect { case a => (a, 0) }.toMap[GapGraphComponent, Int]
 
   def graphCoverage(): Map[GapGraphComponent, Int] =
-    paths.foldLeft(graphNodesVisits) { (maps, path) =>
-      path.foldLeft(graphNodesVisits) { (map, component) =>
+    graphNodesVisits |+| paths.foldLeft(Map[GapGraphComponent, Int]()) { (maps, path) =>
+      maps |+| path.foldLeft(Map[GapGraphComponent, Int]()) { (map, component) =>
         val node = component._1.asInstanceOf[GuiObject]
         val edge = component._2.asInstanceOf[Action]
-          map + (node -> (Try(map(node)).getOrElse(0) + 1)) +
-            (edge -> (Try(map(edge)).getOrElse(0) + 1))
+        map |+| Map(node -> 1, edge -> 1)
       }
     }
   def coveragePercentages: (Float, Float) =
-    val (n,e) = graphCoverage().foldLeft((0, 0)) { (acc, component) =>
-      component._1 match
-        case n: GuiObject => if component._2 > 0 then (acc._1 + 1, acc._2) else acc
-        case e: Action => if component._2 > 0 then (acc._1, acc._2 + 1) else acc
-    }
-    val nodeCoverage = f"${100f*n.toFloat/graphNodes.size}%4.2f".toFloat
-    val edgeCoverage = f"${100f*n.toFloat/graphEdges.size}%4.2f".toFloat
+    val graphCov = graphCoverage()
+    val coveredNodes = graphCov.count((k, v) => v > 0 && k.isInstanceOf[GuiObject])
+    val coveredEdges = graphCov.count((k, v) => v > 0 && k.isInstanceOf[Action])
+    val nodeCoverage = f"${100f*coveredNodes.toFloat/graphNodes.size}%4.2f".toFloat
+    val edgeCoverage = f"${100f*coveredNodes.toFloat/graphEdges.size}%4.2f".toFloat
     (nodeCoverage, edgeCoverage)
 
 

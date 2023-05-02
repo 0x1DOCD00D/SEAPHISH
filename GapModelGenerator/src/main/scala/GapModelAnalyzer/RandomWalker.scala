@@ -25,6 +25,7 @@ case object AllTerminationConditions extends TerminationPolicy
 
 type STEPRESULT = Tuple2[GapGraphComponent, GapGraphComponent]
 type PATHRESULT = List[STEPRESULT]
+type SLICEOFCOMPONENTPIE = List[GapGraphComponent]
 type LISTOFWALKEDPATHS = List[PATHRESULT]
 type GRAPHSTATE = GuiObject
 type WALKSTATE = State[GRAPHSTATE, PATHRESULT]

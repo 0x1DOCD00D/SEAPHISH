@@ -15,6 +15,7 @@ import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
 import Utilz.SPSConstants.*
+import scala.jdk.CollectionConverters.*
 import com.google.common.graph.{MutableValueGraph, ValueGraphBuilder}
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.PrivateMethodTester
@@ -23,6 +24,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
 
+import scala.collection.immutable.ListMap
 import scala.util.{Failure, Success, Try}
 
 //                            +-----------------------------------------------+
@@ -255,12 +257,28 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     logger.info(s"Stats for 1 walks: ${stats_1.graphCoverage()}")
     logger.info(s"Stats for 1 walks: ${stats_1.coveragePercentages}")
 
-    walks_5.foreach(walk => logger.info(s"Walk 5: ${graph.initState.id :: walk}"))
-    val stats_5 = new WalkingStats(graph, walks_5)
-    logger.info(s"Stats for 5 walks: ${stats_5.graphCoverage()}")
-    logger.info(s"Stats for 5 walks: ${stats_5.coveragePercentages}")
-    stats_5.coveragePercentages(0) should be > stats_1.coveragePercentages(0)
+    walks_10.foreach(walk => logger.info(s"Walk 10: ${graph.initState.id :: walk}"))
+    val stats_10 = new WalkingStats(graph, walks_10)
+    logger.info(s"Stats for 10 walks: ${stats_10.graphCoverage()}")
+    logger.info(s"Stats for 10 walks: ${stats_10.coveragePercentages}")
+    stats_10.coveragePercentages(0) should be > stats_1.coveragePercentages(0)
   }
 
+  it should "determine the path estimate for the remaining graph coverage" in {
+    val graph = createTestGraph()
+    val walker = RandomWalker(graph)
+    val walks_5 = walker.walk(5)
+    walks_5.foreach(walk => logger.info(s"Walk 5: ${graph.initState.id :: walk}"))
+    val stats = new WalkingStats(graph, walks_5)
+    val sorted = stats.graphCoverage().toSeq.filter(e => e._1.isInstanceOf[GuiObject] && e._2 > 0).sortBy(_._2).map(_._1.asInstanceOf[GuiObject].id).toSet
+    val all = graph.sm.nodes().asScala.map(_.id).toSet
+    logger.info(s"Sorted walk 5: $sorted")
+    logger.info(s"Uncovered nodes: ${all -- sorted}")
+    val pe = PathsEstimator(graph)
+    val estimate: List[SLICEOFCOMPONENTPIE] = pe.exploreThesePaths(walks_5, 3)
+    estimate.length shouldBe 3
+    estimate.flatten.filter(e=> e.isInstanceOf[GuiObject]).map(e=> e.asInstanceOf[GuiObject].id).toSet shouldBe (all -- sorted)
+    logger.info(s"Estimate: $estimate")
+  }
 
 }

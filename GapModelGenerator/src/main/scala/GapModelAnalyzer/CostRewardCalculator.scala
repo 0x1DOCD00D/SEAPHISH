@@ -8,9 +8,9 @@
 
 package GapModelAnalyzer
 
-import GapGraphAlgebraDefs.GraphPerturbationAlgebra.ModificationRecord
+import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{ModificationRecord, ModificationRecordInverse}
 
 trait CostRewardCalculator(walkedPath: PATHRESULT):
-  def detectedModifications(modificationRecord: ModificationRecord): Double
+  def detectedModifications(mr: ModificationRecordInverse): Double
   def costOfServiceProvider: Double
   def serviceReward: Double
