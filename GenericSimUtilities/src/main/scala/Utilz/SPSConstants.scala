@@ -17,7 +17,7 @@ object SPSConstants:
   val DEFAULTDISTANCESPREADTHRESHOLD: Double = 0.05d
   val PERTURBATIONCOEFFICIENT: String = "perturbationCoefficient"
   val DEFAULTPERTURBATIONCOEFFICIENT: Double = 0.1d
-  val DISTANCECOEFFICIENT: String = "perturbationCoefficient"
+  val DISTANCECOEFFICIENT: String = "distanceCoefficient"
   val DEFAULTDISTANCECOEFFICIENT: Double = 0.1d
   val MODIFICATIONPROBABILITY: String = "modificationProbability"
   val DEFAULTMODIFICATIONPROBABILITY: Double = 0.3d

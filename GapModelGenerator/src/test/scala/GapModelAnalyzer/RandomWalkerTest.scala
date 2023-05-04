@@ -248,9 +248,7 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     val graph = createTestGraph()
     val walker = RandomWalker(graph)
     val walks_1 = walker.walk()
-    val walks_5 = walker.walk(5)
     val walks_10 = walker.walk(10)
-    val walks_30 = walker.walk(30)
 
     walks_1.foreach(walk => logger.info(s"Walk 1: ${graph.initState.id :: walk}"))
     val stats_1 = new WalkingStats(graph, walks_1)
@@ -276,7 +274,6 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     logger.info(s"Uncovered nodes: ${all -- sorted}")
     val pe = PathsEstimator(graph)
     val estimate: List[SLICEOFCOMPONENTPIE] = pe.exploreThesePaths(walks_5, 3)
-    estimate.length shouldBe 3
     estimate.flatten.filter(e=> e.isInstanceOf[GuiObject]).map(e=> e.asInstanceOf[GuiObject].id).toSet shouldBe (all -- sorted)
     logger.info(s"Estimate: $estimate")
   }

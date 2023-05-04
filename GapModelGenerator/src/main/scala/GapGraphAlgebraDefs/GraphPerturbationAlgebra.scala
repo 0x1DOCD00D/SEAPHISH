@@ -34,13 +34,14 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
       //    Suppose that the max distance is 5 and the distance coefficient is 0.2.
       //    Then the min distance to apply perturbation is 5*0.2 = 1
       val minDistance2ApplyPerturbation = maxDistance * GapModelAlgebra.distanceCoeff
+      logger.info(s"Min distance to apply perturbation is $minDistance2ApplyPerturbation")
       val nodesToApplyPerturbation: Seq[GuiObject] = distances.filter(_._2 >= minDistance2ApplyPerturbation).keySet.toSeq
       if nodesToApplyPerturbation.isEmpty then
         logger.error(s"No nodes exist beyond the distance threshold of $minDistance2ApplyPerturbation")
         (newModel, Vector())
       else
         val yesOrNo: Iterator[Boolean] = SupplierOfRandomness.randProbs(2 * nodesToApplyPerturbation.length).map(_ < GapModelAlgebra.perturbationCoeff).iterator
-        (newModel, nodesToApplyPerturbation.toList.foldLeft(Vector[(OriginalGapComponent, Perturbation)]())((acc, node) => if yesOrNo.next() then perturbNode(node) ++ acc else acc))
+        (newModel, nodesToApplyPerturbation.toList.foldLeft(Vector[(OriginalGapComponent, Perturbation)]())((acc, node) => if yesOrNo.nonEmpty && yesOrNo.next() then perturbNode(node) ++ acc else acc))
     end if
 
   private def perturbNode(node: GuiObject): ModificationRecord =
