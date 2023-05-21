@@ -8,16 +8,14 @@
 
 package GapModelAnalyzer
 
-import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{ModificationRecord, ModificationRecordInverse}
-import GapModelAnalyzer.Budget.RemainingBudget
-import cats.data.State
+object Budget:
+  opaque type RemainingBudget = Double
 
-type BUDGETSTATE = State[GRAPHSTATE, RemainingBudget]
-type CostRewardFunction = (PATHRESULT, ModificationRecordInverse, RemainingBudget) => RemainingBudget
 
-object CostRewardCalculator extends CostRewardFunction:
-  override def apply(v1: PATHRESULT, v2: ModificationRecordInverse, v3: RemainingBudget): RemainingBudget = ???
-/*
-  def detectedModifications(mr: ModificationRecordInverse): Double
-  def costOfServiceProvider: Double
-  def serviceReward: Double*/
+  object RemainingBudget:
+    def apply(bgt: Double): RemainingBudget = bgt
+
+    extension (bgt: RemainingBudget)
+      def toDouble: Double = bgt
+      def cost(v: Double): RemainingBudget = RemainingBudget(bgt - v)
+      def reward(v: Double): RemainingBudget = RemainingBudget(bgt + v)

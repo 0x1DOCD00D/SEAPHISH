@@ -6,11 +6,13 @@ import com.typesafe.config.{Config, ConfigFactory}
 import scala.util.Failure
 
 object SPSConstants:
-  private val config = ConfigFactory.load()
+  private val config: Config = ConfigFactory.load()
 
   val SEED: String = "seed"
   val CONFIGENTRYNAME: String = "SeaphishSimulator"
   val GAPMODELCONFIGENTRYNAME: String = "GapModel"
+  val COSTREWARDSCONFIGENTRYNAME: String = "CostRewards"
+
   val EDGEPROBABILITY: String = "edgeProbability"
   val DEFAULTEDGEPROBABILITY: Double = 0.3d
   val DISTANCESPREADTHRESHOLD: String = "distanceSpreadThreshold"
@@ -42,12 +44,26 @@ object SPSConstants:
   val GRAPHWALKNODETERMINATIONPROBABILITY = "graphWalkNodeTerminationProbability"
   val GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT = 0.05d
 
-  val globalConfig: Config = scala.util.Try(config.getConfig(CONFIGENTRYNAME)) match {
-    case scala.util.Success(cfg) => cfg
-    case Failure(exception) => throw new Exception(s"No config entry found for $CONFIGENTRYNAME: ${exception.getMessage}")
-  }
+  val MALAPPBUDGET = "malAppBudget"
+  val MALAPPBUDGETDEFAULT = 100.0d
+  val COSTOFDETECTION = "costOfDetection"
+  val COSTOFDETECTIONDEFAULT = 0.5d
+  val SERVICEREWARD = "serviceReward"
+  val SERVICEREWARDDEFAULT = 1.3d
+  val SERVICEPENALTY = "servicePenalty"
+  val SERVICEPENALTYDEFAULT = 2.3d
+  val TARGETAPPSCORE = "targetAppScore"
+  val TARGETAPPSCOREDEFAULT = 100.0d
+  val TARGETAPPPENALTY = "targetAppPenalty"
+  val TARGETAPPPENALTYDEFAULT = 0.3d
 
-  val configGapModel: Config = scala.util.Try(globalConfig.getConfig(GAPMODELCONFIGENTRYNAME)) match {
+  val globalConfig: Config = obtainConfigModule(config, CONFIGENTRYNAME)
+
+  val configGapModel: Config = obtainConfigModule(globalConfig, GAPMODELCONFIGENTRYNAME)
+
+  val configCostRewards: Config = obtainConfigModule(globalConfig, COSTREWARDSCONFIGENTRYNAME)
+
+  def obtainConfigModule(cf: Config, moduleName: String): Config = scala.util.Try(cf.getConfig(moduleName)) match {
     case scala.util.Success(cfg) => cfg
-    case Failure(exception) => throw new Exception(s"No config entry found for $GAPMODELCONFIGENTRYNAME: ${exception.getMessage}")
+    case Failure(exception) => throw new Exception(s"No config entry found for $moduleName: ${exception.getMessage}")
   }
