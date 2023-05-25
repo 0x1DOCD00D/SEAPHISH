@@ -49,7 +49,7 @@ class BudgetTest extends AnyFlatSpec with Matchers with MockitoSugar with Privat
     malappbudget.cost(1).reward(2.0).penalty(1.0) shouldEqual 110d
   }
 
-  it should "create a target app score and take a cost and a reward and penalty" in {
+  it should "create a target app score and take three penalties" in {
     val tappScore = TargetAppScore(targetAppScore)
 //    200-0.3 => 199.7
     tappScore.penalty.penalty.penalty.toDouble - 199.1d should be < 0.01d
