@@ -56,6 +56,8 @@ object SPSConstants:
   val TARGETAPPSCOREDEFAULT = 100.0d
   val TARGETAPPPENALTY = "targetAppPenalty"
   val TARGETAPPPENALTYDEFAULT = 0.3d
+  val SERVICEREWARDPROBABILITY = "serviceRewardProbability"
+  val SERVICEREWARDPROBABILITYDEFAULT = 0.5d
 
   val globalConfig: Config = obtainConfigModule(config, CONFIGENTRYNAME)
 
