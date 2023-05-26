@@ -213,7 +213,7 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
 
   it should "create a perturbed graph" in {
     val graph = createTestGraph()
-    val perturbedGraph = GraphPerturbationAlgebra(graph)
+    val perturbedGraph = GraphPerturbationAlgebra(graph).head
     logger.info(s"Perturbed graph: ${perturbedGraph._2}")
     perturbedGraph._1.sm.nodes().size() shouldBe graph.sm.nodes().size()
     perturbedGraph._2.length should be >= 1

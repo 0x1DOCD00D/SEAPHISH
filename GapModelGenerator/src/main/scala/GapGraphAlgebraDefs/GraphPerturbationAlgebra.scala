@@ -23,13 +23,13 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
   private val distances: Map[GuiObject, Double] = newModel.distances().toSeq.sortBy(_._2).toMap
   private val (minDistance, maxDistance) = (distances.minBy(_._2)._2, distances.maxBy(_._2)._2)
   private val range: Double = maxDistance - minDistance
-  def perturbModel: (GapGraph, ModificationRecord) =
+  def perturbModel(quantity: Int): List[(GapGraph, ModificationRecord)] =
     require(GapModelAlgebra.perturbationCoeff > 0 && GapModelAlgebra.perturbationCoeff <= 1, "The perturbation coefficient must be between 0 and 1")
     require(GapModelAlgebra.distanceCoeff >= 0 && GapModelAlgebra.distanceCoeff <= 1, "The distance percentile must be between 0 and 1")
 
     if range < GapModelAlgebra.distanceSpreadThreshold then
       logger.error(s"The range of distances, $range must be greater than the threshold ${GapModelAlgebra.distanceSpreadThreshold}")
-      (newModel, Vector())
+      List((newModel, Vector()))
     else
       //    Suppose that the max distance is 5 and the distance coefficient is 0.2.
       //    Then the min distance to apply perturbation is 5*0.2 = 1
@@ -38,10 +38,10 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
       val nodesToApplyPerturbation: Seq[GuiObject] = distances.filter(_._2 >= minDistance2ApplyPerturbation).keySet.toSeq
       if nodesToApplyPerturbation.isEmpty then
         logger.error(s"No nodes exist beyond the distance threshold of $minDistance2ApplyPerturbation")
-        (newModel, Vector())
+        List((newModel, Vector()))
       else
-        val yesOrNo: Iterator[Boolean] = SupplierOfRandomness.randProbs(2 * nodesToApplyPerturbation.length).map(_ < GapModelAlgebra.perturbationCoeff).iterator
-        (newModel, nodesToApplyPerturbation.toList.foldLeft(Vector[(OriginalGapComponent, Perturbation)]())((acc, node) => if yesOrNo.nonEmpty && yesOrNo.next() then perturbNode(node) ++ acc else acc))
+        val yesOrNo: Iterator[Boolean] = SupplierOfRandomness.randProbs(quantity * 2 * nodesToApplyPerturbation.length).map(_ < GapModelAlgebra.perturbationCoeff).iterator
+        (1 to quantity).toList.map(_=>(newModel, nodesToApplyPerturbation.toList.foldLeft(Vector[(OriginalGapComponent, Perturbation)]())((acc, node) => if yesOrNo.nonEmpty && yesOrNo.next() then perturbNode(node) ++ acc else acc)))
     end if
 
   private def perturbNode(node: GuiObject): ModificationRecord =
@@ -199,8 +199,8 @@ object GraphPerturbationAlgebra:
 
   val logger: Logger = CreateLogger(classOf[GraphPerturbationAlgebra.type])
 
-  def apply(originalModel: GapGraph): (GapGraph, ModificationRecord) =
-    new GraphPerturbationAlgebra(originalModel).perturbModel
+  def apply(originalModel: GapGraph, quantity:Int = 1): List[(GapGraph, ModificationRecord)] =
+    new GraphPerturbationAlgebra(originalModel).perturbModel(quantity)
 
   def inverseMR(mr: ModificationRecord): ModificationRecordInverse =
     def gapComponentFromPerturbation(perturbation: Perturbation): GapGraphComponent = perturbation match
