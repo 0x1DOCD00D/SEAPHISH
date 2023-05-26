@@ -1,7 +1,10 @@
 package GapGraphAlgebraDefs
 
+import GapGraphAlgebraDefs.GapModelAlgebra.{mapAppBudget, targetAppScore}
 import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{EdgeAdded, EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, NodeRemoved, OriginalGapComponent, inverseMR}
 import GapGraphAlgebraDefs.GraphPerturbationAlgebraTest.{ADDEDGEMETHOD, ADDNODEMETHOD, MODIFYEDGEMETHOD, MODIFYNODEMETHOD, REMOVEEDGEMETHOD, REMOVENODEMETHOD}
+import GapModelAnalyzer.Budget.{MalAppBudget, TargetAppScore}
+import GapModelAnalyzer.{CostRewardCalculator, PATHRESULT, RandomWalker}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
@@ -58,7 +61,7 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     logger.info(s"Inverse MR: ${invMR.toString}")
     val res: Option[(OriginalGapComponent, GraphPerturbationAlgebra.Perturbation)] = modificationRecord.find(_._1 == OriginalGapComponent(node3))
     res.get._1.node shouldBe node3
-    invMR(node3).length shouldBe 2
+    invMR.flatMap(_._2).toList.contains(node3) shouldBe true
   }
 
   it should "remove a node from the graph" in {
@@ -72,7 +75,7 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     modificationRecord shouldBe Vector((OriginalGapComponent(GuiObject(1,5,10,1,20,5,5,10)),NodeRemoved(GuiObject(1,5,10,1,20,5,5,10))), (OriginalGapComponent(GuiObject(1,5,10,1,20,5,5,10)),EdgeRemoved(Action(1,1,2,Some(12),0.12))))
     val invMR = inverseMR(modificationRecord)
     logger.info(s"Inverse MR: ${invMR.toString}")
-    invMR(node1).length shouldBe 2
+    invMR.flatMap(_._2).toList.contains(node1) shouldBe true
   }
 
   it should "modify a node from the graph" in {
@@ -88,7 +91,7 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
 
     val invMR = inverseMR(modificationRecord)
     logger.info(s"Inverse MR: ${invMR.toString}")
-    invMR(node2).length shouldBe 1
+    invMR.flatMap(_._2).toList.contains(node2) shouldBe true
   }
 
   it should "add an edge to the graph" in {
@@ -106,7 +109,8 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
 
     val invMR = inverseMR(modificationRecord)
     logger.info(s"Inverse MR: ${invMR.toString}")
-    invMR(node3).length shouldBe 1
+
+    invMR.flatMap(_._2).toList.contains(node3) shouldBe true
   }
 
   it should "remove an edge from the graph" in {
@@ -124,7 +128,8 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
 
     val invMR = inverseMR(modificationRecord)
     logger.info(s"Inverse MR: ${invMR.toString}")
-    invMR(node2).length shouldBe 1
+
+    invMR.flatMap(_._2).toList.contains(node2) shouldBe true
   }
 
   it should "modify an edge in the graph" in {
@@ -145,6 +150,24 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
 
     val invMR = inverseMR(modificationRecord)
     logger.info(s"Inverse MR: ${invMR.toString}")
-    invMR(node2).length shouldBe 3
+    invMR.flatMap(_._2).toList.contains(node2) shouldBe true
   }
+
+  it should "compute the costs and rewards for a walk with a modified a node" in {
+    val graph = createTestGraph()
+    logger.info(s"Original graph: ${graph.sm.toString}")
+    val algebra = new GraphPerturbationAlgebra(graph)
+    val theFunc = PrivateMethod[ModificationRecord](Symbol(MODIFYNODEMETHOD))
+    val modificationRecord: ModificationRecord = algebra invokePrivate theFunc(node2)
+    logger.info(s"Modified graph: ${graph.sm.toString}")
+    val invMR = inverseMR(modificationRecord)
+    logger.info(s"Inverse MR: ${invMR.toString}")
+    val walker = RandomWalker(graph)
+    val walk: PATHRESULT = walker.walk().head
+    logger.info(s"Original walk: ${walk.toString}")
+    mapAppBudget shouldBe 110
+    targetAppScore shouldBe 200
+    CostRewardCalculator(walk, invMR)(MalAppBudget(mapAppBudget), TargetAppScore(targetAppScore)) shouldBe (MalAppBudget(108.5625), TargetAppScore(199.7))
+  }
+
 }

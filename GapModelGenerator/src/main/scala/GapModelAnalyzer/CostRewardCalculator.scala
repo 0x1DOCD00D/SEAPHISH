@@ -11,6 +11,7 @@ package GapModelAnalyzer
 import GapGraphAlgebraDefs.Action
 import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{ModificationRecord, ModificationRecordInverse}
 import GapModelAnalyzer.Budget.*
+import Randomizer.SupplierOfRandomness
 import Utilz.{CreateLogger, SPSConstants}
 import cats.data.State
 
@@ -41,8 +42,14 @@ object CostRewardCalculator extends CostRewardFunction:
       val pathLength = v1.size.toDouble
       val avgWeight: Double = v1.map(_._2.asInstanceOf[Action].cost).sum / pathLength
 
-      val appScore = v1.foldLeft(costs._2)((appScore, entry) => if v2.contains(entry._1) || v2.contains(entry._2) then appScore.penalty else appScore)
-      (costs._1.cost(pathLength).reward(0.2), appScore)
+      logger.info(s"COST data: ${v1.toString()}, ${v2.toString()}")
+      val appScore = v1.foldLeft(costs._2)((appScore, entry) => if v2.contains(entry._1) || v2.contains(entry._2) then
+        logger.info(s"Cost reward calculator detected modification: ${entry.toString()} and applied penalty to the app score ${appScore.penalty} ")
+        appScore.penalty
+      else appScore)
+      val mab:MalAppBudget = costs._1.cost(pathLength)
+      logger.info(s"Cost reward calculator reduced the malappbudget: $mab")
+      (if SupplierOfRandomness.`YesOrNo?`(serviceRewardProbability) then mab.reward(avgWeight) else mab.penalty(avgWeight), appScore)
     }
 
   @main def runCostRewardCalculator(args: String*): Unit =

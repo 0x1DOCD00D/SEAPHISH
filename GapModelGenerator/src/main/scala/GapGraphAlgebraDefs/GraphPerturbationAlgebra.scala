@@ -102,7 +102,7 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
     val modifiedNode: GuiObject = node.modify
     val adjacentNodes = newModel.sm.adjacentNodes(node).asScala.toList ::: List(node)
     logger.info(s"Adjacent nodes of $node are $adjacentNodes")
-    logger.info(s"Modified version of the node of $node $modifiedNode")
+    logger.info(s"Modified version of the node $node is the node $modifiedNode")
     val inducedGraph: MutableValueGraph[GuiObject, Action] = Graphs.inducedSubgraph(newModel.sm, adjacentNodes.toSet.asJava)
     val preds = inducedGraph.predecessors(node).asScala.toList
     val succ = inducedGraph.successors(node).asScala.toList
@@ -213,6 +213,9 @@ object GraphPerturbationAlgebra:
     end gapComponentFromPerturbation
 
     mr.foldLeft(Map[GapGraphComponent, List[GapGraphComponent]]())(
-      (acc, elem) => acc +
-        (elem._1.node -> (gapComponentFromPerturbation(elem._2) :: acc.getOrElse(elem._1.node, List())))
+      (acc, elem) => {
+        val guicomp: GapGraphComponent = gapComponentFromPerturbation(elem._2)
+        acc + (guicomp -> (elem._1.node :: acc.getOrElse(guicomp, List())))
+      }
+//        (elem._1.node -> (gapComponentFromPerturbation(elem._2) :: acc.getOrElse(elem._1.node, List())))
     )

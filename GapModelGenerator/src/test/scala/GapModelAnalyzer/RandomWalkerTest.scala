@@ -277,5 +277,4 @@ class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with 
     estimate.flatten.filter(e=> e.isInstanceOf[GuiObject]).map(e=> e.asInstanceOf[GuiObject].id).toSet shouldBe (all -- sorted)
     logger.info(s"Estimate: $estimate")
   }
-
 }

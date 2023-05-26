@@ -18,7 +18,7 @@ trait MutableBookeeping4Efficiency:
 
 object SupplierOfRandomness extends MutableBookeeping4Efficiency:
   val logger: Logger = CreateLogger(this.getClass)
-  def `YesOrNo?`(thresholdProb: Double = 0.5d): Boolean =
+  infix def `YesOrNo?`(thresholdProb: Double = 0.5d): Boolean =
     require(thresholdProb >= 0.0d && thresholdProb <= 1.0d, s"thresholdProb must be between 0.0 and 1.0, but was $thresholdProb")
     randProbs(1).head < thresholdProb
   def onDemand(minv:Int = 0, maxv:Int = Int.MaxValue): Int =
