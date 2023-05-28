@@ -36,19 +36,19 @@ type COSTTUPLE = (MalAppBudget, TargetAppScore)
 type CostRewardFunction = (PATHRESULT, ModificationRecordInverse) => COSTTUPLE => COSTTUPLE
 
 object CostRewardCalculator extends CostRewardFunction:
-  override def apply(v1: PATHRESULT, v2: ModificationRecordInverse): ((MalAppBudget, TargetAppScore)) => (MalAppBudget, TargetAppScore) =
+  override def apply(v1: PATHRESULT, v2: ModificationRecordInverse): COSTTUPLE => COSTTUPLE =
     (costs:COSTTUPLE) => {
       import GapGraphAlgebraDefs.GapModelAlgebra.*
       val pathLength = v1.size.toDouble
       val avgWeight: Double = v1.map(_._2.asInstanceOf[Action].cost).sum / pathLength
 
-      logger.info(s"COST data: ${v1.toString()}, ${v2.toString()}")
+      logger.info(s"Malapp budget: ${costs._1} and the target app score is ${costs._2}")
       val appScore = v1.foldLeft(costs._2)((appScore, entry) => if v2.contains(entry._1) || v2.contains(entry._2) then
         logger.info(s"Cost reward calculator detected modification: ${entry.toString()} and applied penalty to the app score ${appScore.penalty} ")
         appScore.penalty
       else appScore)
       val mab:MalAppBudget = costs._1.cost(pathLength)
-      logger.info(s"Cost reward calculator reduced the malappbudget: $mab")
+      logger.info(s"Malappbudget: $mab changed from ${costs._1}, target app score: $appScore changed from ${costs._2}")
       (if SupplierOfRandomness.`YesOrNo?`(serviceRewardProbability) then mab.reward(avgWeight) else mab.penalty(avgWeight), appScore)
     }
 

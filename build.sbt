@@ -104,6 +104,13 @@ lazy val Model = (project in file("Model"))
   ).dependsOn(GenericSimUtilities)
 
 compileOrder := CompileOrder.JavaThenScala
+fork := true
+javaOptions ++= Seq(
+  "-Xms1512M",
+  "-Xmx20000M",
+  "-XX:+CMSClassUnloadingEnabled",
+  "-XX:+UseConcMarkSweepGC"
+    )
 
 val jarName = "seaphishsim.jar"
 assembly/assemblyJarName := jarName

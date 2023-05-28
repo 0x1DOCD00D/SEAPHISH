@@ -10,11 +10,12 @@ package GapModelAnalyzer
 
 import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{EdgeRemoved, ModificationRecord, NodeModified, NodeRemoved, OriginalGapComponent}
 import GapGraphAlgebraDefs.GraphPerturbationAlgebraTest.{MODIFYNODEMETHOD, REMOVENODEMETHOD}
-import GapGraphAlgebraDefs.{Action, GapGraph, GapGraphComponent, GraphPerturbationAlgebra, GuiObject, TerminalNode}
+import GapGraphAlgebraDefs.{Action, GapGraph, GapGraphComponent, GapModelAlgebra, GraphPerturbationAlgebra, GuiObject, TerminalNode}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
 import Utilz.SPSConstants.*
+
 import scala.jdk.CollectionConverters.*
 import com.google.common.graph.{MutableValueGraph, ValueGraphBuilder}
 import org.mockito.Mockito.{mock, when}
@@ -53,6 +54,7 @@ import scala.util.{Failure, Success, Try}
 //                           +------------------------------------------------+
 class RandomWalkerTest extends AnyFlatSpec with Matchers with MockitoSugar with PrivateMethodTester {
   val logger: Logger = CreateLogger(this.getClass)
+  logger.info(GapModelAlgebra.getFields.mkString(","))
   val node1: GuiObject = GuiObject(id = 1, children = 1, props = 1, propValueRange = 1, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
   val node2: GuiObject = GuiObject(id = 2, children = 2, props = 2, propValueRange = 2, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
   val node3: GuiObject = GuiObject(id = 3, children = 3, props = 3, propValueRange = 3, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)

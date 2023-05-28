@@ -18,12 +18,14 @@ import scala.jdk.CollectionConverters.*
 
 //  six types of perturbations: node modified, node removed, edge removed, edge is modified, new node is added with edges, new edge is added to some existing node
 class GraphPerturbationAlgebra(originalModel: GapGraph):
+  type GraphPerturbationTuple = (GapGraph, ModificationRecord)
   import GraphPerturbationAlgebra.*
   private val newModel: GapGraph = originalModel.copy()
+  private val containsNode: GuiObject => Boolean = (node: GuiObject) => newModel.sm.nodes().asScala.toList.contains(node)
   private val distances: Map[GuiObject, Double] = newModel.distances().toSeq.sortBy(_._2).toMap
   private val (minDistance, maxDistance) = (distances.minBy(_._2)._2, distances.maxBy(_._2)._2)
   private val range: Double = maxDistance - minDistance
-  def perturbModel(quantity: Int): List[(GapGraph, ModificationRecord)] =
+  def perturbModel(quantity: Int): List[GraphPerturbationTuple] =
     require(GapModelAlgebra.perturbationCoeff > 0 && GapModelAlgebra.perturbationCoeff <= 1, "The perturbation coefficient must be between 0 and 1")
     require(GapModelAlgebra.distanceCoeff >= 0 && GapModelAlgebra.distanceCoeff <= 1, "The distance percentile must be between 0 and 1")
 
@@ -41,7 +43,7 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
         List((newModel, Vector()))
       else
         val yesOrNo: Iterator[Boolean] = SupplierOfRandomness.randProbs(quantity * 2 * nodesToApplyPerturbation.length).map(_ < GapModelAlgebra.perturbationCoeff).iterator
-        (1 to quantity).toList.map(_=>(newModel, nodesToApplyPerturbation.toList.foldLeft(Vector[(OriginalGapComponent, Perturbation)]())((acc, node) => if yesOrNo.nonEmpty && yesOrNo.next() then perturbNode(node) ++ acc else acc)))
+        (1 to quantity).toList.map(_=>(newModel, nodesToApplyPerturbation.toList.foldLeft(Vector[(OriginalGapComponent, Perturbation)]())((acc, node) => if yesOrNo.nonEmpty && yesOrNo.next() && containsNode(node) then perturbNode(node) ++ acc else acc)))
     end if
 
   private def perturbNode(node: GuiObject): ModificationRecord =
@@ -59,8 +61,7 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
   * */
   private def removeNode(node: GuiObject): ModificationRecord =
     import scala.jdk.OptionConverters.*
-    val allNodes: List[GuiObject] = newModel.sm.nodes().asScala.toList
-    if allNodes.contains(node) then
+    if containsNode(node) then
       val modificationRecord:ModificationRecord = Vector((OriginalGapComponent(node), NodeRemoved(node))) ++ newModel.sm.predecessors(node).asScala.toList.flatMap {pn =>
         newModel.sm.edgeValue(pn, node).toScala match
           case Some(edge) =>
@@ -99,18 +100,22 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
 
   private def modifyNode(node: GuiObject): ModificationRecord =
     import scala.jdk.OptionConverters.*
-    val modifiedNode: GuiObject = node.modify
-    val adjacentNodes = newModel.sm.adjacentNodes(node).asScala.toList ::: List(node)
-    logger.info(s"Adjacent nodes of $node are $adjacentNodes")
-    logger.info(s"Modified version of the node $node is the node $modifiedNode")
-    val inducedGraph: MutableValueGraph[GuiObject, Action] = Graphs.inducedSubgraph(newModel.sm, adjacentNodes.toSet.asJava)
-    val preds = inducedGraph.predecessors(node).asScala.toList
-    val succ = inducedGraph.successors(node).asScala.toList
-    newModel.sm.removeNode(node)
-    newModel.sm.addNode(modifiedNode)
-    preds.foreach(pred => newModel.sm.putEdgeValue(pred, modifiedNode, inducedGraph.edgeValue(pred, node).get))
-    succ.foreach(succ => newModel.sm.putEdgeValue(modifiedNode, succ, inducedGraph.edgeValue(node, succ).get))
-    Vector((OriginalGapComponent(node), NodeModified(modifiedNode)))
+    if !containsNode(node) then
+      logger.error(s"Node $node does not exist in the model")
+      Vector()
+    else
+      val modifiedNode: GuiObject = node.modify
+      val adjacentNodes = newModel.sm.adjacentNodes(node).asScala.toList ::: List(node)
+      logger.info(s"Adjacent nodes of $node are $adjacentNodes")
+      logger.info(s"Modified version of the node $node is the node $modifiedNode")
+      val inducedGraph: MutableValueGraph[GuiObject, Action] = Graphs.inducedSubgraph(newModel.sm, adjacentNodes.toSet.asJava)
+      val preds = inducedGraph.predecessors(node).asScala.toList
+      val succ = inducedGraph.successors(node).asScala.toList
+      newModel.sm.removeNode(node)
+      newModel.sm.addNode(modifiedNode)
+      preds.foreach(pred => newModel.sm.putEdgeValue(pred, modifiedNode, inducedGraph.edgeValue(pred, node).get))
+      succ.foreach(succ => newModel.sm.putEdgeValue(modifiedNode, succ, inducedGraph.edgeValue(node, succ).get))
+      Vector((OriginalGapComponent(node), NodeModified(modifiedNode)))
 
   private def doTheEdge(node: GuiObject, foundNodes: Array[GuiObject], op: (GuiObject, GuiObject)=>ModificationRecord): ModificationRecord =
     if foundNodes.nonEmpty then
@@ -124,11 +129,12 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
 
   private def operationOnEdges(node: GuiObject, action: ACTIONS): ModificationRecord =
     import scala.jdk.OptionConverters.*
-    val allNodes: List[GuiObject] = newModel.sm.nodes().asScala.toList
+
     val nodesLambda: GuiObject => Boolean = (otherNode: GuiObject) => otherNode != node &&
       (newModel.sm.hasEdgeConnecting(node, otherNode) ||
         newModel.sm.hasEdgeConnecting(otherNode, node))
-    if allNodes.contains(node) then
+    if containsNode(node) then
+      val allNodes: List[GuiObject] = newModel.sm.nodes().asScala.toList
       action match
         case ACTIONS.ADDEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[GuiObject], addEdge)
         case ACTIONS.REMOVEEDGE => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[GuiObject], removeEdge)
@@ -165,8 +171,8 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
       logger.info(s"Added edge $newEdge from $node to $chosenNode successfully to create a new perturbed model")
       Vector((OriginalGapComponent(node), EdgeAdded(newEdge)))
     else
-      logger.error(s"Failed to add edge from $node to $chosenNode")
-      Vector()
+      logger.info(s"Former edge from $node to $chosenNode was $edge2Modify and it's replaced by the new edge $newEdge")
+      Vector((OriginalGapComponent(node), EdgeModified(edge2Modify.get))) ++ removeEdge(node, chosenNode) ++ addEdge(node, chosenNode)
 
   @tailrec
   private def modifyEdge(node: GuiObject, chosenNode: GuiObject): ModificationRecord =
@@ -179,6 +185,7 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
       else
         Vector((OriginalGapComponent(node), EdgeModified(edge2Modify.get))) ++ removeEdge(node, chosenNode) ++ addEdge(node, chosenNode)
     else modifyEdge(chosenNode, node)
+
 object GraphPerturbationAlgebra:
   trait Perturbation
 

@@ -1,2 +1,2 @@
-resolvers in ThisBuild += "lightbend-commercial-mvn" at "https://repo.lightbend.com/pass/Umak-6tdaOdMVRkFJ1DFRm17LA4Udad1X3Bjr4q53raeQaC7/commercial-releases"
-resolvers in ThisBuild += Resolver.url("lightbend-commercial-ivy", url("https://repo.lightbend.com/pass/Umak-6tdaOdMVRkFJ1DFRm17LA4Udad1X3Bjr4q53raeQaC7/commercial-releases"))(Resolver.ivyStylePatterns)
+ThisBuild / resolvers += "lightbend-commercial-mvn" at "https://repo.lightbend.com/pass/Umak-6tdaOdMVRkFJ1DFRm17LA4Udad1X3Bjr4q53raeQaC7/commercial-releases"
+ThisBuild / resolvers += Resolver.url("lightbend-commercial-ivy", url("https://repo.lightbend.com/pass/Umak-6tdaOdMVRkFJ1DFRm17LA4Udad1X3Bjr4q53raeQaC7/commercial-releases"))(Resolver.ivyStylePatterns)

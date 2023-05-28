@@ -8,8 +8,47 @@
 
 package GapModelAnalyzer
 
-import GapGraphAlgebraDefs.GapGraph
-import GapGraphAlgebraDefs.GraphPerturbationAlgebra.ModificationRecord
+import GapGraphAlgebraDefs.GapModelAlgebra.{mapAppBudget, targetAppScore}
+import GapGraphAlgebraDefs.{GapGraph, GapModelAlgebra, GraphPerturbationAlgebra, GuiObject}
+import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{ModificationRecord, ModificationRecordInverse, inverseMR}
+import GapModelAnalyzer.Budget.{MalAppBudget, TargetAppScore}
+
+import scala.annotation.tailrec
+import scala.jdk.CollectionConverters.*
 
 object Analyzer:
-  def apply(og: GapGraph, pg: GapGraph, mr: ModificationRecord): WalkingStats = ???
+  def apply(graph: GapGraph, mr: ModificationRecordInverse, numberOfWalks:Int): COSTTUPLE =
+    @tailrec def computeTotalCostsRewards(allWalks: List[PATHRESULT], cr: COSTTUPLE): COSTTUPLE =
+      allWalks match
+        case Nil => cr
+        case head :: tail =>
+          val ucr:COSTTUPLE = CostRewardCalculator(head, mr)(cr)
+          computeTotalCostsRewards(tail, ucr)
+    end computeTotalCostsRewards
+
+    val walker = RandomWalker(graph)
+    val walks: List[PATHRESULT] = walker.walk(numberOfWalks)
+    computeTotalCostsRewards(walks, (MalAppBudget(mapAppBudget), TargetAppScore(targetAppScore)))
+
+  def computeWalksStats(graph: GapGraph, walks: List[PATHRESULT]): Unit =
+    walks.foreach(walk => logger.info(s"Walks: ${graph.initState.id :: walk}"))
+    val stats = new WalkingStats(graph, walks)
+    val sorted = stats.graphCoverage().toSeq.filter(e => e._1.isInstanceOf[GuiObject] && e._2 > 0).sortBy(_._2).map(_._1.asInstanceOf[GuiObject].id).toSet
+    val all = graph.sm.nodes().asScala.map(_.id).toSet
+    logger.info(s"Sorted walk 5: $sorted")
+    logger.info(s"Uncovered nodes: ${all -- sorted}")
+    val pe = PathsEstimator(graph)
+    val estimate: List[SLICEOFCOMPONENTPIE] = pe.exploreThesePaths(walks, 3)
+    estimate.flatten.filter(e => e.isInstanceOf[GuiObject]).map(e => e.asInstanceOf[GuiObject].id).toSet
+    val remaining =  all -- sorted
+    logger.info(s"Estimate: $estimate")
+
+  @main def runAnalyzer(args: String*): Unit =
+    logger.info("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/GapModelGenerator/src/main/scala/GapModelAnalyzer/Analyzer.scala created at time 7:08 PM")
+    logger.info(GapModelAlgebra.getFields.mkString(", ") )
+    val graph: GapGraph = GapModelAlgebra()
+    val algebra = new GraphPerturbationAlgebra(graph)
+    val pms: List[GraphPerturbationAlgebra#GraphPerturbationTuple] = algebra.perturbModel(10)
+    val allCosts: List[COSTTUPLE] = pms.map(pm => Analyzer(pm._1, inverseMR(pm._2), 50))
+    allCosts.foreach(c => logger.info(s"Costs: $c"))
+

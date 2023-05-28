@@ -109,7 +109,9 @@ object GapModelAlgebra:
   val servicePenalty: Double = getConfigEntry(SPSConstants.configCostRewards,SERVICEPENALTY, SERVICEPENALTYDEFAULT)
   val targetAppScore: Double = getConfigEntry(SPSConstants.configCostRewards,TARGETAPPSCORE, TARGETAPPSCOREDEFAULT)
   val targetAppPenalty: Double = getConfigEntry(SPSConstants.configCostRewards,TARGETAPPPENALTY, TARGETAPPPENALTYDEFAULT)
-  
+
+  def getFields: Map[String, Double] = this.getClass.getDeclaredFields.filter(field => field.getType == classOf[Double]).map(field => field.getName -> field.get(this).asInstanceOf[Double]).toMap[String, Double] ++  this.getClass.getDeclaredFields.filter(field => field.getType == classOf[Int]).map(field => field.getName -> field.get(this).toString.toDouble).toMap[String, Double]
+
   def apply(forceLinkOrphans: Boolean = true): GapGraph = new GapModel().generateModel(forceLinkOrphans)
 
   def createAction(from: GuiObject, to: GuiObject): Action =
