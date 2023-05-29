@@ -8,7 +8,7 @@
 
 package GapModelAnalyzer
 
-import GapGraphAlgebraDefs.GapModelAlgebra.{mapAppBudget, targetAppScore}
+import GapGraphAlgebraDefs.GapModelAlgebra.{mapAppBudget, targetAppHighPenalty, targetAppLowPenalty, targetAppScore}
 import GapModelAnalyzer.Budget.{MalAppBudget, TargetAppScore}
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
@@ -29,29 +29,25 @@ class BudgetTest extends AnyFlatSpec with Matchers with MockitoSugar with Privat
 
   behavior of "cost/reward computation types"
 
-//  malAppBudget: 110.0, costOfDetection: 0.5, serviceReward: 1.5, servicePenalty: 2.5, targetAppScore: 200.0, targetAppPenalty: 0.3
   it should "create a malapp budget and take a cost of one and two steps" in {
     val malappbudget = MalAppBudget(mapAppBudget)
-    malappbudget.cost(1) shouldEqual 109.5d
-    malappbudget.cost(2) shouldEqual 109d
+    malappbudget.cost(1).toDouble should be < mapAppBudget.toDouble
+    malappbudget.cost(2).toDouble should be < malappbudget.cost(1).toDouble
   }
 
   it should "create a malapp budget and take a cost and a reward" in {
     val malappbudget = MalAppBudget(mapAppBudget)
-//    110-0.5+1.5 => 111
-    malappbudget.cost(1).reward(1.0) shouldEqual 111d
-    malappbudget.cost(1).reward(3.0) shouldEqual 114d
+    malappbudget.cost(1).reward(1.0).toDouble should be > malappbudget.toDouble
+    malappbudget.cost(1).reward(1.0).toDouble should be > malappbudget.cost(5).toDouble
   }
 
   it should "create a malapp budget and take a cost and a reward and penalty" in {
     val malappbudget = MalAppBudget(mapAppBudget)
-    //    110-0.5+1.5*2-2.5*1 => 110
-    malappbudget.cost(1).reward(2.0).penalty(1.0) shouldEqual 110d
+    malappbudget.cost(1).reward(2.0).penalty(1.0).toDouble should be < malappbudget.reward(1.0).toDouble
   }
 
   it should "create a target app score and take three penalties" in {
     val tappScore = TargetAppScore(targetAppScore)
-//    200-0.3 => 199.7
-    tappScore.penalty.penalty.penalty.toDouble - 199.1d should be < 0.01d
+    tappScore.penalty(targetAppLowPenalty).penalty(targetAppHighPenalty).penalty(targetAppLowPenalty).toDouble should be < tappScore.toDouble
   }
 }

@@ -8,7 +8,7 @@
 
 package GapModelAnalyzer
 
-import GapGraphAlgebraDefs.GapModelAlgebra.{costOfDetection, servicePenalty, serviceReward, targetAppPenalty}
+import GapGraphAlgebraDefs.GapModelAlgebra.{costOfDetection, servicePenalty, serviceReward, targetAppLowPenalty}
 
 object Budget:
   opaque type MalAppBudget = Double
@@ -29,4 +29,4 @@ object Budget:
 
     extension (as: TargetAppScore)
       def toDouble: Double = as
-      def penalty: TargetAppScore = TargetAppScore(as - targetAppPenalty)
+      def penalty(p: Double): TargetAppScore = TargetAppScore(as - p)

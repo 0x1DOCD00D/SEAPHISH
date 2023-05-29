@@ -1,6 +1,6 @@
 package GapGraphAlgebraDefs
 
-import GapGraphAlgebraDefs.GapModelAlgebra.{edgeProbability, maxBranchingFactor, maxDepth, maxProperties, propValueRange}
+import GapGraphAlgebraDefs.GapModelAlgebra.{edgeProbability, maxBranchingFactor, maxDepth, maxProperties, propValueRange, targetAppHighPenalty, targetAppLowPenalty}
 import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{ACTIONS, EdgeAdded, EdgeModified, EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, OriginalGapComponent, Perturbation, logger}
 import Randomizer.SupplierOfRandomness
 import Utilz.CreateLogger
@@ -43,16 +43,22 @@ class GraphPerturbationAlgebra(originalModel: GapGraph):
         List((newModel, Vector()))
       else
         val yesOrNo: Iterator[Boolean] = SupplierOfRandomness.randProbs(quantity * 2 * nodesToApplyPerturbation.length).map(_ < GapModelAlgebra.perturbationCoeff).iterator
-        (1 to quantity).toList.map(_=>(newModel, nodesToApplyPerturbation.toList.foldLeft(Vector[(OriginalGapComponent, Perturbation)]())((acc, node) => if yesOrNo.nonEmpty && yesOrNo.next() && containsNode(node) then perturbNode(node) ++ acc else acc)))
+        (1 to quantity).toList.map(i => (newModel, nodesToApplyPerturbation.toList.foldLeft(Vector[(OriginalGapComponent, Perturbation)]())
+        (
+          (acc, node) =>
+            if yesOrNo.nonEmpty && yesOrNo.next() && containsNode(node) then
+              (if i == 1 then perturbNode(node, true) else perturbNode(node)) ++ acc
+            else acc))
+        )
     end if
 
-  private def perturbNode(node: GuiObject): ModificationRecord =
+  private def perturbNode(node: GuiObject, dissimulate: Boolean = false): ModificationRecord =
     val op2do = ACTIONS.fromOrdinal(SupplierOfRandomness.onDemand(maxv = ACTIONS.values.map(_.ordinal).toList.max))
     logger.info(s"Applying perturbation $op2do on node $node")
     op2do match
-      case ACTIONS.ADDNODE => addNode(node)
+      case ACTIONS.ADDNODE => if dissimulate then modifyNode(node) else addNode(node)
       case ACTIONS.MODIFYNODE => modifyNode(node)
-      case ACTIONS.REMOVENODE => removeNode(node)
+      case ACTIONS.REMOVENODE => if dissimulate then modifyNode(node) else removeNode(node)
       case op => operationOnEdges(node, op)
 
   /*
@@ -199,7 +205,7 @@ object GraphPerturbationAlgebra:
   case class OriginalGapComponent(node: GapGraphComponent)
 
   type ModificationRecord = Vector[(OriginalGapComponent, Perturbation)]
-  type ModificationRecordInverse = Map[GapGraphComponent, List[GapGraphComponent]]
+  type ModificationRecordInverse = Map[GapGraphComponent, Double]
 
   enum ACTIONS:
     case REMOVENODE, ADDNODE, MODIFYNODE, REMOVEEDGE, ADDEDGE, MODIFYEDGE
@@ -210,19 +216,19 @@ object GraphPerturbationAlgebra:
     new GraphPerturbationAlgebra(originalModel).perturbModel(quantity)
 
   def inverseMR(mr: ModificationRecord): ModificationRecordInverse =
-    def gapComponentFromPerturbation(perturbation: Perturbation): GapGraphComponent = perturbation match
-      case NodeModified(node) => node
-      case NodeRemoved(node) => node
-      case NodeAdded(node) => node
-      case EdgeRemoved(edge) => edge
-      case EdgeAdded(edge) => edge
-      case EdgeModified(action) => action
+    def gapComponentFromPerturbation(perturbation: Perturbation): (GapGraphComponent, Double) = perturbation match
+      case NodeModified(node) => (node, targetAppLowPenalty)
+      case NodeRemoved(node) => (node, targetAppHighPenalty)
+      case NodeAdded(node) => (node, targetAppLowPenalty)
+      case EdgeRemoved(edge) => (edge, targetAppHighPenalty)
+      case EdgeAdded(edge) => (edge, targetAppLowPenalty)
+      case EdgeModified(action) => (action, targetAppLowPenalty)
     end gapComponentFromPerturbation
 
-    mr.foldLeft(Map[GapGraphComponent, List[GapGraphComponent]]())(
+    mr.foldLeft(Map[GapGraphComponent, Double]())(
       (acc, elem) => {
-        val guicomp: GapGraphComponent = gapComponentFromPerturbation(elem._2)
-        acc + (guicomp -> (elem._1.node :: acc.getOrElse(guicomp, List())))
+        val guicomp: (GapGraphComponent, Double) = gapComponentFromPerturbation(elem._2)
+        acc + (guicomp._1 -> (acc.getOrElse(guicomp._1, 0.0d) + guicomp._2))
       }
 //        (elem._1.node -> (gapComponentFromPerturbation(elem._2) :: acc.getOrElse(elem._1.node, List())))
     )

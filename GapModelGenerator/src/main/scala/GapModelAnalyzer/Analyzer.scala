@@ -49,6 +49,6 @@ object Analyzer:
     val graph: GapGraph = GapModelAlgebra()
     val algebra = new GraphPerturbationAlgebra(graph)
     val pms: List[GraphPerturbationAlgebra#GraphPerturbationTuple] = algebra.perturbModel(10)
-    val allCosts: List[COSTTUPLE] = pms.map(pm => Analyzer(pm._1, inverseMR(pm._2), 50))
-    allCosts.foreach(c => logger.info(s"Costs: $c"))
+    val allCosts: List[COSTTUPLE] = pms.map(pm => Analyzer(pm._1, inverseMR(pm._2), 500))
+    allCosts.foreach(c => logger.info(s"Costs: $c with the ratio ${c._2.toDouble/c._1.toDouble}"))
 

@@ -43,12 +43,14 @@ object CostRewardCalculator extends CostRewardFunction:
       val avgWeight: Double = v1.map(_._2.asInstanceOf[Action].cost).sum / pathLength
 
       logger.info(s"Malapp budget: ${costs._1} and the target app score is ${costs._2}")
-      val appScore = v1.foldLeft(costs._2)((appScore, entry) => if v2.contains(entry._1) || v2.contains(entry._2) then
-        logger.info(s"Cost reward calculator detected modification: ${entry.toString()} and applied penalty to the app score ${appScore.penalty} ")
-        appScore.penalty
-      else appScore)
+      val appScore = v1.foldLeft(costs._2)((appScore, entry) =>
+        val as1 = if v2.contains(entry._1) then appScore.penalty(v2(entry._1)) else appScore
+        val as2 = if v2.contains(entry._2) then appScore.penalty(v2(entry._2)) else appScore
+        logger.info(s"Cost reward calculator detected modification: ${entry.toString()} and applied penalty resulting in the app score $as2")
+        as2
+      )
       val mab:MalAppBudget = costs._1.cost(pathLength)
-      logger.info(s"Malappbudget: $mab changed from ${costs._1}, target app score: $appScore changed from ${costs._2}")
+      logger.info(s"Malappbudget: $mab changed from ${costs._1}, target app score: $appScore changed from ${costs._2}, the ration is ${mab.toDouble/appScore.toDouble}")
       (if SupplierOfRandomness.`YesOrNo?`(serviceRewardProbability) then mab.reward(avgWeight) else mab.penalty(avgWeight), appScore)
     }
 
@@ -56,4 +58,5 @@ object CostRewardCalculator extends CostRewardFunction:
     import GapGraphAlgebraDefs.GapModelAlgebra.*
     val logger = CreateLogger(classOf[CostRewardCalculator.type])
     logger.info("File /Users/drmark/Library/CloudStorage/OneDrive-UniversityofIllinoisChicago/Github/SeaPhish/GapModelGenerator/src/main/scala/GapModelAnalyzer/CostRewardCalculator.scala created at time 7:06 PM")
-    logger.info(s"malAppBudget: $mapAppBudget, costOfDetection: $costOfDetection, serviceReward: $serviceReward, servicePenalty: $servicePenalty, targetAppScore: $targetAppScore, targetAppPenalty: $targetAppPenalty")
+    logger.info(s"malAppBudget: $mapAppBudget, costOfDetection: $costOfDetection, serviceReward: $serviceReward, servicePenalty: $servicePenalty, targetAppScore: $targetAppScore, " +
+      s"targetAppPenalty: $targetAppLowPenalty, targetAppHighPenalty: $targetAppHighPenalty, serviceRewardProbability: $serviceRewardProbability")
