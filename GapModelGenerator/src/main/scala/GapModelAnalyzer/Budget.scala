@@ -20,7 +20,7 @@ object Budget:
 
     extension (bgt: MalAppBudget)
       def toDouble: Double = bgt
-      def cost(steps: Double): MalAppBudget = MalAppBudget(bgt - costOfDetection*steps)
+      def cost(steps: Double = 1d): MalAppBudget = MalAppBudget(bgt - costOfDetection*steps)
       def reward(v: Double): MalAppBudget = MalAppBudget(bgt + v*serviceReward)
       def penalty(v: Double): MalAppBudget = MalAppBudget(bgt - v*servicePenalty)
 

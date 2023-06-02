@@ -2,7 +2,7 @@ package GapGraphAlgebraDefs
 
 import Randomizer.SupplierOfRandomness
 import Utilz.CreateLogger
-import com.google.common.graph.*
+import com.google.common.graph.{Graphs, MutableValueGraph, ValueGraphBuilder}
 import org.slf4j.Logger
 
 import scala.collection.immutable.TreeSeqMap.OrderBy

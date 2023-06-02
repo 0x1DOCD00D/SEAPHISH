@@ -161,8 +161,8 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     mapAppBudget shouldBe 110
     targetAppScore shouldBe 200
     val resCosts = CostRewardCalculator(walk, invMR)(MalAppBudget(mapAppBudget), TargetAppScore(targetAppScore))
-    resCosts._1.toDouble should be < 110d
-    resCosts._2.toDouble should be <= 200d
+    resCosts._1._1.toDouble should be < 110d
+    resCosts._1._2.toDouble should be <= 200d
   }
 
 }

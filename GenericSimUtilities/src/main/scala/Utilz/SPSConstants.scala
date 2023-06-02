@@ -13,6 +13,8 @@ object SPSConstants:
   val GAPMODELCONFIGENTRYNAME: String = "GapModel"
   val COSTREWARDSCONFIGENTRYNAME: String = "CostRewards"
 
+  val DOPPLEGANGERS: String = "dopplegangers"
+  val DOPPLEGANGERSDEFAULT: Int = 5
   val EDGEPROBABILITY: String = "edgeProbability"
   val DEFAULTEDGEPROBABILITY: Double = 0.3d
   val DISTANCESPREADTHRESHOLD: String = "distanceSpreadThreshold"

@@ -8,12 +8,14 @@
 
 package GapModelAnalyzer
 
-import GapGraphAlgebraDefs.Action
+import GapGraphAlgebraDefs.{Action, GapGraphComponent, GuiObject}
 import GapGraphAlgebraDefs.GraphPerturbationAlgebra.{ModificationRecord, ModificationRecordInverse}
 import GapModelAnalyzer.Budget.*
 import Randomizer.SupplierOfRandomness
 import Utilz.{CreateLogger, SPSConstants}
 import cats.data.State
+
+import scala.annotation.tailrec
 
 /*
 * The simulator computes random walks through the GAP graph thus simulating the behavior of the smartphone user.
@@ -33,26 +35,41 @@ import cats.data.State
 * This computed service award will be applied using the accept/reject mechanism of the service award probability.
 * */
 type COSTTUPLE = (MalAppBudget, TargetAppScore)
-type CostRewardFunction = (PATHRESULT, ModificationRecordInverse) => COSTTUPLE => COSTTUPLE
+type CostRewardFunction = (PATHRESULT, ModificationRecordInverse) => COSTTUPLE => (COSTTUPLE, ModificationRecordInverse)
 
 object CostRewardCalculator extends CostRewardFunction:
-  override def apply(v1: PATHRESULT, v2: ModificationRecordInverse): COSTTUPLE => COSTTUPLE =
+  override def apply(v1: PATHRESULT, v2: ModificationRecordInverse): COSTTUPLE => (COSTTUPLE, ModificationRecordInverse) =
+    def detectModification(guiComp: GapGraphComponent, costs: COSTTUPLE, theTable: ModificationRecordInverse): (COSTTUPLE, ModificationRecordInverse) =
+      val newMalScore = costs._1.cost()
+      if theTable.contains(guiComp) then
+        val newTapScore = costs._2.penalty(theTable(guiComp))
+        logger.info(s"Modification detected for $guiComp and applied penalty resulting in the app score $newTapScore")
+        val updatedModificationTable:ModificationRecordInverse = theTable - guiComp
+        ((newMalScore, newTapScore), updatedModificationTable)
+      else ((newMalScore, costs._2), theTable)
+    end detectModification
+
+    @tailrec
+    def computeCosts4Walk(path: PATHRESULT, costs: COSTTUPLE, theTable: ModificationRecordInverse): (COSTTUPLE, ModificationRecordInverse) =
+      path match
+        case Nil => (costs, theTable)
+        case hd::tl =>
+          val resultNode = detectModification(hd._1, costs, theTable)
+          val result = detectModification(hd._2, resultNode._1, resultNode._2)
+          computeCosts4Walk(tl, result._1, result._2)
+    end computeCosts4Walk
+
     (costs:COSTTUPLE) => {
       import GapGraphAlgebraDefs.GapModelAlgebra.*
       val pathLength = v1.size.toDouble
       val avgWeight: Double = v1.map(_._2.asInstanceOf[Action].cost).sum / pathLength
 
       logger.info(s"Malapp budget: ${costs._1} and the target app score is ${costs._2}")
-      val appScore = v1.foldLeft(costs._2)((appScore, entry) =>
-        val as1 = if v2.contains(entry._1) then appScore.penalty(v2(entry._1)) else appScore
-        val as2 = if v2.contains(entry._2) then appScore.penalty(v2(entry._2)) else appScore
-        logger.info(s"Cost reward calculator detected modification: ${entry.toString()} and applied penalty resulting in the app score $as2")
-        as2
-      )
-      val mab:MalAppBudget = costs._1.cost(pathLength)
-      logger.info(s"Malappbudget: $mab changed from ${costs._1}, target app score: $appScore changed from ${costs._2}, the ration is ${mab.toDouble/appScore.toDouble}")
-      (if SupplierOfRandomness.`YesOrNo?`(serviceRewardProbability) then mab.reward(avgWeight) else mab.penalty(avgWeight), appScore)
+      val (newCost:COSTTUPLE, theUpdatedTable:ModificationRecordInverse) = computeCosts4Walk(v1, costs, v2)
+      logger.info(s"Malappbudget: ${newCost._1} changed from ${costs._1}, tapp score: ${newCost._2} changed from ${costs._2}, the ratio is ${newCost._1.toDouble/newCost._2.toDouble}")
+      ((if SupplierOfRandomness.`YesOrNo?`(serviceRewardProbability) then newCost._1.reward(avgWeight) else newCost._1.penalty(avgWeight), newCost._2), theUpdatedTable)
     }
+  end apply
 
   @main def runCostRewardCalculator(args: String*): Unit =
     import GapGraphAlgebraDefs.GapModelAlgebra.*
