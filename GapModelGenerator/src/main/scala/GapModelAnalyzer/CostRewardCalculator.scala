@@ -35,26 +35,26 @@ import scala.annotation.tailrec
 * This computed service award will be applied using the accept/reject mechanism of the service award probability.
 * */
 type COSTTUPLE = (MalAppBudget, TargetAppScore)
-type CostRewardFunction = (PATHRESULT, ModificationRecordInverse) => COSTTUPLE => (COSTTUPLE, ModificationRecordInverse)
+type CostRewardFunction = (PATHRESULT, ModificationRecordInverse, DetectedModifiedComponents) => COSTTUPLE => (COSTTUPLE, DetectedModifiedComponents)
+type DetectedModifiedComponents = List[GapGraphComponent]
 
 object CostRewardCalculator extends CostRewardFunction:
-  override def apply(v1: PATHRESULT, v2: ModificationRecordInverse): COSTTUPLE => (COSTTUPLE, ModificationRecordInverse) =
-    def detectModification(guiComp: GapGraphComponent, costs: COSTTUPLE, theTable: ModificationRecordInverse): (COSTTUPLE, ModificationRecordInverse) =
+  override def apply(v1: PATHRESULT, v2: ModificationRecordInverse, v3: DetectedModifiedComponents): COSTTUPLE => (COSTTUPLE, DetectedModifiedComponents) =
+    def detectModification(guiComp: GapGraphComponent, costs: COSTTUPLE, dc: DetectedModifiedComponents): (COSTTUPLE, DetectedModifiedComponents) =
       val newMalScore = costs._1.cost()
-      if theTable.contains(guiComp) then
-        val newTapScore = costs._2.penalty(theTable(guiComp))
+      if v2.contains(guiComp) && !dc.contains(guiComp) then
+        val newTapScore = costs._2.penalty(v2(guiComp))
         logger.info(s"Modification detected for $guiComp and applied penalty resulting in the app score $newTapScore")
-        val updatedModificationTable:ModificationRecordInverse = theTable - guiComp
-        ((newMalScore, newTapScore), updatedModificationTable)
-      else ((newMalScore, costs._2), theTable)
+        ((newMalScore, newTapScore), guiComp :: dc)
+      else ((newMalScore, costs._2), dc)
     end detectModification
 
     @tailrec
-    def computeCosts4Walk(path: PATHRESULT, costs: COSTTUPLE, theTable: ModificationRecordInverse): (COSTTUPLE, ModificationRecordInverse) =
+    def computeCosts4Walk(path: PATHRESULT, costs: COSTTUPLE, dc: DetectedModifiedComponents): (COSTTUPLE, DetectedModifiedComponents) =
       path match
-        case Nil => (costs, theTable)
+        case Nil => (costs, dc)
         case hd::tl =>
-          val resultNode = detectModification(hd._1, costs, theTable)
+          val resultNode = detectModification(hd._1, costs, dc)
           val result = detectModification(hd._2, resultNode._1, resultNode._2)
           computeCosts4Walk(tl, result._1, result._2)
     end computeCosts4Walk
@@ -65,9 +65,9 @@ object CostRewardCalculator extends CostRewardFunction:
       val avgWeight: Double = v1.map(_._2.asInstanceOf[Action].cost).sum / pathLength
 
       logger.info(s"Malapp budget: ${costs._1} and the target app score is ${costs._2}")
-      val (newCost:COSTTUPLE, theUpdatedTable:ModificationRecordInverse) = computeCosts4Walk(v1, costs, v2)
-      logger.info(s"Malappbudget: ${newCost._1} changed from ${costs._1}, tapp score: ${newCost._2} changed from ${costs._2}, the ratio is ${newCost._1.toDouble/newCost._2.toDouble}")
-      ((if SupplierOfRandomness.`YesOrNo?`(serviceRewardProbability) then newCost._1.reward(avgWeight) else newCost._1.penalty(avgWeight), newCost._2), theUpdatedTable)
+      val (newCost:COSTTUPLE, dc:DetectedModifiedComponents) = computeCosts4Walk(v1, costs, v3)
+      logger.info(s"Malappbudget: ${newCost._1} changed from ${costs._1}, tapp score: ${newCost._2} changed from ${costs._2}, detected ${dc.size} components the ratio is ${newCost._1.toDouble/newCost._2.toDouble}")
+      ((if SupplierOfRandomness.`YesOrNo?`(serviceRewardProbability) then newCost._1.reward(avgWeight) else newCost._1.penalty(avgWeight), newCost._2), dc)
     }
   end apply
 

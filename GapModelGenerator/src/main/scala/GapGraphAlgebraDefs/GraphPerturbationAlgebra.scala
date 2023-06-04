@@ -233,6 +233,7 @@ object GraphPerturbationAlgebra:
     mr.foldLeft(Map[GapGraphComponent, Double]())(
       (acc, elem) => {
         val guicomp: (GapGraphComponent, Double) = gapComponentFromPerturbation(elem._2)
+        logger.info(s"MR: ${guicomp._1} -> ${(acc.getOrElse(guicomp._1, 0.0d) + guicomp._2)}")
         acc + (guicomp._1 -> (acc.getOrElse(guicomp._1, 0.0d) + guicomp._2))
       }
     )

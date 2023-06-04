@@ -17,20 +17,19 @@ import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.*
 
 object Analyzer:
-  def apply(graph: GapGraph, mr: ModificationRecordInverse, numberOfWalks:Int, appName: String): COSTTUPLE =
-    @tailrec def computeTotalCostsRewards(allWalks: List[PATHRESULT], changedMR: ModificationRecordInverse, cr: COSTTUPLE): COSTTUPLE =
+  def apply(graph: GapGraph, mr: ModificationRecordInverse, numberOfWalks:Int, appName: String): (COSTTUPLE, DetectedModifiedComponents) =
+    @tailrec def computeTotalCostsRewards(allWalks: List[PATHRESULT], cr: COSTTUPLE, dc: DetectedModifiedComponents): (COSTTUPLE, DetectedModifiedComponents) =
       allWalks match
-        case Nil => cr
+        case Nil => (cr,dc)
         case head :: tail =>
-          val ucr:(COSTTUPLE, ModificationRecordInverse) = CostRewardCalculator(head, mr)(cr)
-          computeTotalCostsRewards(tail, ucr._2, ucr._1)
+          val ucr:(COSTTUPLE, DetectedModifiedComponents) = CostRewardCalculator(head, mr, dc)(cr)
+          computeTotalCostsRewards(tail, ucr._1, ucr._2)
     end computeTotalCostsRewards
 
     logger.info(s"Analyzing the model of the $appName app: ${mr.size} modifications out of which ${mr.keySet.count(_.isInstanceOf[GuiObject])} are GUI objects")
     val walker = RandomWalker(graph)
     val walks: List[PATHRESULT] = walker.walk(numberOfWalks)
-//    computeWalksStats(graph, walks)
-    computeTotalCostsRewards(walks, mr, (MalAppBudget(mapAppBudget), TargetAppScore(targetAppScore)))
+    computeTotalCostsRewards(walks, (MalAppBudget(mapAppBudget), TargetAppScore(targetAppScore)), List())
   end apply
 
   def computeWalksStats(graph: GapGraph, walks: List[PATHRESULT]): Unit =
@@ -71,10 +70,13 @@ object Analyzer:
       res
     )
     logger.info("Successfully created perturbed models")
-    val tappCosts: COSTTUPLE = Analyzer(tappModel._1, inverseMR(tappModel._2), 500, "Target")
-    val allCosts: List[COSTTUPLE] = pms.zipWithIndex.map {
+    val tappCosts: (COSTTUPLE, DetectedModifiedComponents) = Analyzer(tappModel._1, inverseMR(tappModel._2), 500, "Target")
+    val allCosts: List[(COSTTUPLE, DetectedModifiedComponents)] = pms.zipWithIndex.map {
       case (pm, index) => Analyzer(pm._1, inverseMR(pm._2), 500, s"Doppleganger_$index")
     }
-    logger.info(s"Target app costs: $tappCosts with the ratio ${tappCosts._2.toDouble/tappCosts._1.toDouble}")
-    allCosts.foreach(c => logger.info(s"Doppleganger app costs: $c with the ratio ${c._2.toDouble/c._1.toDouble}"))
+    logger.info(s"Target app costs: $tappCosts with the ratio ${tappCosts._1._2.toDouble/tappCosts._1._1.toDouble}")
+    logger.info(s"Target app detection")
+    allCosts.zipWithIndex.foreach(
+    (c,index) => logger.info(s"Doppleganger app $index costs: $c with the ratio ${c._1._2.toDouble/c._1._1.toDouble}")
+  )
 
