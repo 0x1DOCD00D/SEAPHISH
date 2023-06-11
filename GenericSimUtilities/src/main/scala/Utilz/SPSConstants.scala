@@ -7,6 +7,8 @@ import scala.util.Failure
 
 object SPSConstants:
   private val config: Config = ConfigFactory.load()
+  case class EnumeratedLoopParameters(ps: List[Double])
+  case class FromToWithStepParameters(from: Double, to: Double, step: Double)
 
   val SEED: String = "seed"
   val CONFIGENTRYNAME: String = "SeaphishSimulator"
@@ -27,6 +29,8 @@ object SPSConstants:
   val DEFAULTMODIFICATIONPROBABILITY: Double = 0.3d
   val STATESTOTAL: String = "statesTotal"
   val STATESTOTALDEFAULT: Int = 30
+  val WALKS: String = "numberOfWalks"
+  val WALKSDEFAULT: Int = 1500
   val MAXBRANCHINGFACTOR = "maxBranchingFactor"
   val MAXBRANCHINGFACTORDEFAULT = 7
   val MAXDEPTH = "maxDepth"

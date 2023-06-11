@@ -10,6 +10,10 @@ package GapModelAnalyzer
 
 import GapGraphAlgebraDefs.GapModelAlgebra.{costOfDetection, servicePenalty, serviceReward, targetAppLowPenalty}
 
+/*
+* The initial values are zeros and whenever there is a cost the mapallbudget is increased by the costOfDetection and a reward decreases the mapallbudget by the serviceReward.
+* A detected modification results in the increase of the targetappscore by a penalty. The idea is that smaller values of malappbudget and targetappscore are better.
+* */
 object Budget:
   opaque type MalAppBudget = Double
   opaque type TargetAppScore = Double
@@ -20,13 +24,13 @@ object Budget:
 
     extension (bgt: MalAppBudget)
       def toDouble: Double = bgt
-      def cost(steps: Double = 1d): MalAppBudget = MalAppBudget(bgt - costOfDetection*steps)
-      def reward(v: Double): MalAppBudget = MalAppBudget(bgt + v*serviceReward)
-      def penalty(v: Double): MalAppBudget = MalAppBudget(bgt - v*servicePenalty)
+      def cost(steps: Double = 1d): MalAppBudget = MalAppBudget(bgt + costOfDetection*steps)
+      def reward(v: Double): MalAppBudget = MalAppBudget(bgt - v*serviceReward)
+      def penalty(v: Double): MalAppBudget = MalAppBudget(bgt + v*servicePenalty)
 
   object TargetAppScore:
     def apply(as: Double): TargetAppScore = as
 
     extension (as: TargetAppScore)
       def toDouble: Double = as
-      def penalty(p: Double): TargetAppScore = TargetAppScore(as - p)
+      def penalty(p: Double): TargetAppScore = TargetAppScore(as + p)

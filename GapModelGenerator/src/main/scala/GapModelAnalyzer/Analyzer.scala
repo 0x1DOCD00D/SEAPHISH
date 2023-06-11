@@ -29,7 +29,7 @@ object Analyzer:
     logger.info(s"Analyzing the model of the $appName app: ${mr.size} modifications out of which ${mr.keySet.count(_.isInstanceOf[GuiObject])} are GUI objects")
     val walker = RandomWalker(graph)
     val walks: List[PATHRESULT] = walker.walk(numberOfWalks)
-    computeTotalCostsRewards(walks, (MalAppBudget(mapAppBudget), TargetAppScore(targetAppScore)), List())
+    computeTotalCostsRewards(walks, (MalAppBudget(0.0d), TargetAppScore(0.0d)), List())
   end apply
 
   def computeWalksStats(graph: GapGraph, walks: List[PATHRESULT]): Unit =
@@ -70,13 +70,23 @@ object Analyzer:
       res
     )
     logger.info("Successfully created perturbed models")
-    val tappCosts: (COSTTUPLE, DetectedModifiedComponents) = Analyzer(tappModel._1, inverseMR(tappModel._2), 500, "Target")
+    val tappCosts: (COSTTUPLE, DetectedModifiedComponents) = Analyzer(tappModel._1, inverseMR(tappModel._2), GapModelAlgebra.numberOfWalks, "Target")
     val allCosts: List[(COSTTUPLE, DetectedModifiedComponents)] = pms.zipWithIndex.map {
-      case (pm, index) => Analyzer(pm._1, inverseMR(pm._2), 500, s"Doppleganger_$index")
+      case (pm, index) => Analyzer(pm._1, inverseMR(pm._2), GapModelAlgebra.numberOfWalks, s"Doppleganger_$index")
     }
     logger.info(s"Target app costs: $tappCosts with the ratio ${tappCosts._1._2.toDouble/tappCosts._1._1.toDouble}")
-    logger.info(s"Target app detection")
-    allCosts.zipWithIndex.foreach(
-    (c,index) => logger.info(s"Doppleganger app $index costs: $c with the ratio ${c._1._2.toDouble/c._1._1.toDouble}")
-  )
+    logger.info(s"Cost/score normalization between zero and one")
+    val listOfCosts: List[COSTTUPLE] = allCosts.map(_._1)
+    val maxCost: Double = listOfCosts.map(_._1.toDouble).max
+    val maxScore: Double = listOfCosts.map(_._2.toDouble).max
+    val normalizedCosts: List[(Double,Double, Double, Double)] = listOfCosts.map(c => (c._1.toDouble/maxCost, c._2.toDouble/maxScore, c._1.toDouble, c._2.toDouble))
 
+    normalizedCosts.zipWithIndex.foreach(
+      (c, index) => logger.info(f"Doppleganger app $index costs: ${c._1}%1.3f with the score ${c._2}%1.3f, abs values (${c._3}%1.3f, ${c._4}%1.3f) and its harmonic score ${2 * c._2 * c._1 / (c._2 + c._1)}%1.3f and its geometric score ${scala.math.sqrt(c._2 * c._1)}%1.3f")
+    )
+
+    val appScores: List[(Double, Int)] = normalizedCosts.zipWithIndex.map((c, index)=>(scala.math.sqrt(c._2*c._1), index)).sortBy(_._1)
+    appScores.foreach(
+      (c,index) => logger.info(f"Doppleganger app $index scores $c%1.3f")
+    )
+    logger.info(f"The winner is app ${appScores.head._2} with the score ${appScores.head._1}%1.3f")
